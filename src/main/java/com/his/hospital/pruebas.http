@@ -1,0 +1,129 @@
+### Registro de Paciente en el HIS (Prueba 1)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "nombre": "Monica Alexa Orellana",
+  "username": "maorellana",
+  "password": "Password@123",
+  "email": "prueba123@gmail.com",
+  "dpi": "1487965213478",
+  "nit": "12345678",
+  "telefono": "55443322"
+}
+### 2. Consultar todos los usuarios registrados en el hospital
+GET http://localhost:8080/api/users
+
+### 3. Buscar al paciente Carlos por su número de DPI
+GET http://localhost:8080/api/users/dpi/2845123450101
+
+### 4. Prueba de error: Buscar un DPI inventado que no existe
+GET http://localhost:8080/api/users/dpi/9999999999999
+
+### 5. Login Exitoso: Entrar con las credenciales correctas de Carlos
+POST http://localhost:8080/api/users/login
+Content-Type: application/json
+
+{
+  "username": "cmendoza",
+  "password": "Password123456!"
+}
+
+### 6. Login Fallido: Entrar con una contraseña equivocada (Ejecútalo 5 veces seguidas para probar el bloqueo)
+POST http://localhost:8080/api/users/login
+Content-Type: application/json
+
+{
+  "username": "cmendoza",
+  "password": "claveIncorrecta123"
+}
+### 7. Crear un Médico para el Hospital (ID 2)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "nombre": "Dra. Ana Sofia Lopez",
+  "username": "alopez",
+  "password": "Password123456!",
+  "email": "alopez@hospital.com",
+  "dpi": "1111222233334",
+  "telefono": "88776655"
+}
+
+### 8. Agendar Cita Médica (Paciente Carlos ID 1 con Dra. Ana ID 2)
+POST http://localhost:8080/api/citas/agendar
+Content-Type: application/json
+
+{
+  "pacienteId": 1,
+  "medicoId": 2,
+  "fechaHora": "2026-07-15T10:08:00",
+  "motivo": "Chequeo general por dolor de cabeza",
+  "observaciones": "El paciente presenta dolor leve desde hace dos días"
+}
+
+### 9. Ver historial de citas del paciente Carlos (ID 1)
+GET http://localhost:8080/api/citas/paciente/1
+
+### 10. Cancelar la cita médica recién creada (ID 1)
+PUT http://localhost:8080/api/citas/cancelar/1
+### 11. Registrar al personal de Enfermería (Enfermero ID 3)
+POST http://localhost:8080/api/users/register
+Content-Type: application/json
+
+{
+  "nombre": "Enf. Mario René Aguilar",
+  "username": "maguilar",
+  "password": "Password123456!",
+  "email": "maguilar@hospital.com",
+  "dpi": "3333444455556",
+  "telefono": "44332211"
+}
+
+### 12. Agendar una NUEVA Cita Médica para Carlos (ID 2 - Para mañana)
+POST http://localhost:8080/api/citas/agendar
+Content-Type: application/json
+
+{
+  "pacienteId": 1,
+  "medicoId": 2,
+  "fechaHora": "2026-07-16T11:00:00",
+  "motivo": "Consulta de seguimiento por migraña"
+}
+
+### 13. ¡Estación de Enfermería! Registrar Signos Vitales y Triage (Para la Cita ID 2)
+POST http://localhost:8080/api/triage/registrar
+Content-Type: application/json
+
+{
+  "citaId": 2,
+  "enfermeraId": 3,
+  "temperatura": 36.7,
+  "presionArterial": "120/80",
+  "frecuenciaCardiaca": 74,
+  "frecuenciaRespiratoria": 16,
+  "saturacionOxigeno": 98,
+  "peso": 72.5,
+  "altura": 1.75,
+  "categoria": "VERDE- ",
+  "observaciones": "Paciente consciente y estable. Refiere leve molestia."
+}
+
+### 14. Ver la ficha de signos vitales de la Cita 2
+GET http://localhost:8080/api/triage/cita/2
+
+### 15. ¡Consultorio Médico! La Dra. Ana atiende a Carlos y emite su receta (Para la Cita ID 2)
+POST http://localhost:8080/api/consultas/atender
+Content-Type: application/json
+
+{
+  "citaId": 2,
+  "medicoId": 2,
+  "diagnostico": "Migraña tensional por estrés laboral",
+  "sintomasYEvolucion": "Paciente presenta dolor ocular y temporal de 2 días de evolución. Signos vitales estables según Triage.",
+  "recetaMedica": "1. Ibuprofeno 600mg - Tomar 1 tableta cada 8 horas por 3 días tras las comidas. 2. Paracetamol 500mg - 1 tableta en caso de dolor severo.",
+  "indicacionesGenerales": "Dormir 8 horas diarias, reducir el uso de pantallas en la noche y aumentar la hidratación."
+}
+
+### 16. Ver la receta médica y el diagnóstico final de la Cita 2
+GET http://localhost:8080/api/consultas/cita/2
