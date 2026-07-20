@@ -100,7 +100,7 @@ async function procesarLogin() {
 }
 
 // =========================================================================
-// PASO 2B: REGISTRAR EXPEDIENTE NUEVO (PACIENTE)
+// PASO 2B: REGISTRAR USUARIO Y CREAR EXPEDIENTE EN POSTGRESQL
 // =========================================================================
 async function procesarRegistro() {
     const alertBox = document.getElementById("reg-alert");
@@ -109,7 +109,7 @@ async function procesarRegistro() {
     const telefono = document.getElementById("reg-tel").value.trim();
     if (telefono.length !== 8 || isNaN(telefono)) {
         alertBox.className = "alert alert-warning font-weight-bold";
-        alertBox.innerText = "⚠️ El número de teléfono debe contener exactly 8 dígitos numéricos.";
+        alertBox.innerText = "⚠️ El número de teléfono debe contener exactamente 8 dígitos numéricos.";
         alertBox.style.display = "block";
         return;
     }
@@ -128,17 +128,36 @@ async function procesarRegistro() {
     };
 
     try {
-        const respuesta = await fetch(`${API_URL}/users/register`, {
+        // 1. PRIMERA PETICIÓN: Guardar el usuario del paciente
+        const respUser = await fetch(`${API_URL}/users/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(nuevoUsuario)
         });
 
-        const datos = await respuesta.json();
+        const datosUser = await respUser.json();
 
-        if (respuesta.ok) {
+        if (respUser.ok) {
+            // Extraemos el ID generado en PostgreSQL
+            const idGenerado = datosUser.id || datosUser.usuario_id;
+
+            // 2. SEGUNDA PETICIÓN: Crear y vincular su expediente clínico en la BD
+            const datosExpediente = {
+                pacienteId: idGenerado,
+                tipoSangre: "Pendiente de Triage",
+                alergias: "Ninguna registrada",
+                antecedentesMedicos: "Especialidad solicitada en registro: " + especialidadVal,
+                contactoEmergencia: "Teléfono propio: " + telefono
+            };
+
+            await fetch(`${API_URL}/expedientes`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(datosExpediente)
+            });
+
             alertBox.className = "alert alert-success font-weight-bold";
-            alertBox.innerText = "✅ ¡Expediente creado con éxito! Redireccionando al login...";
+            alertBox.innerText = "✅ ¡Cuenta y Expediente Clínico creados con éxito en PostgreSQL! Redireccionando...";
             alertBox.style.display = "block";
 
             setTimeout(() => {
@@ -149,13 +168,14 @@ async function procesarRegistro() {
             }, 1800);
         } else {
             alertBox.className = "alert alert-danger";
-            alertBox.innerText = "❌ " + (datos.error || "Error al registrar expediente.");
+            alertBox.innerText = "❌ " + (datosUser.error || "Error al registrar la cuenta.");
             alertBox.style.display = "block";
         }
     } catch (error) {
         alertBox.className = "alert alert-danger";
         alertBox.innerText = "Error de conexión al intentar registrar.";
         alertBox.style.display = "block";
+        console.error(error);
     }
 }
 
