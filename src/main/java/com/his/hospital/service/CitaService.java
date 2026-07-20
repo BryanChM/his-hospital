@@ -4,52 +4,68 @@ import com.his.hospital.dto.CitaDTO;
 import com.his.hospital.entity.Cita;
 import com.his.hospital.entity.User;
 import com.his.hospital.repository.CitaRepository;
+
 import com.his.hospital.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.stereotype.Service;
+
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class CitaService {
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private CitaRepository citaRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+
 
     // Agendar nueva cita con validación de choques de horario
+    @Transactional
     public Cita agendarCita(CitaDTO dto) {
-        User paciente = userRepository.findById(dto.getPacienteId())
-                .orElseThrow(() -> new RuntimeException("Error: El paciente especificado no existe."));
 
+        // 1. Validar que el ID no llegue nulo desde el frontend
+        if (dto.getMedicoId() == null) {
+            throw new RuntimeException("Error: El ID del médico llegó vacío desde el formulario web.");
+        }
+        if (dto.getPacienteId() == null) {
+            throw new RuntimeException("Error: El ID del paciente llegó vacío.");
+        }
+
+        // 2. BUSCAR AL MÉDICO REAL EN POSTGRESQL
         User medico = userRepository.findById(dto.getMedicoId())
-                .orElseThrow(() -> new RuntimeException("Error: El médico especificado no existe."));
+                .orElseThrow(() -> new RuntimeException("El médico seleccionado (ID: " + dto.getMedicoId() + ") no existe en la base de datos."));
 
-        LocalDateTime fechaConsulta = dto.getFechaHora();
+        // 3. BUSCAR AL PACIENTE REAL
+        User paciente = userRepository.findById(dto.getPacienteId())
+                .orElseThrow(() -> new RuntimeException("El paciente seleccionado no existe."));
+        LocalDateTime inicioVentana = dto.getFechaHora().minusMinutes(29);
+        LocalDateTime finVentana = dto.getFechaHora().plusMinutes(29);
 
-        if (fechaConsulta.isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("Error: No puedes agendar una cita en una fecha o hora pasada.");
+        boolean choqueMedico = citaRepository.existeChoqueHorarioMedico(
+                dto.getMedicoId(),
+                inicioVentana,
+                finVentana
+        );
+
+        if (choqueMedico) {
+            throw new RuntimeException("⚠️ Horario no disponible: El médico seleccionado ya tiene una consulta programada en ese rango de hora.");
         }
+        // 4. Armar la cita con los objetos encontrados
+        Cita nuevaCita = new Cita();
+        nuevaCita.setMedico(medico);       // <-- Aquí le pasamos el objeto completo, ¡ya nunca será null!
+        nuevaCita.setPaciente(paciente);
+        nuevaCita.setFechaHora(dto.getFechaHora());
+        nuevaCita.setMotivo(dto.getMotivo());
+        nuevaCita.setEstado("AGENDADA");
 
-        boolean choque = citaRepository.existsByMedicoIdAndFechaHoraAndEstadoNot(
-                dto.getMedicoId(), fechaConsulta, "CANCELADA");
-
-        if (choque) {
-            throw new RuntimeException("Error: El médico ya tiene una consulta agendada exactamente en esa fecha y hora.");
-        }
-
-        Cita cita = new Cita();
-        cita.setPaciente(paciente);
-        cita.setMedico(medico);
-        cita.setFechaHora(fechaConsulta);
-        cita.setMotivo(dto.getMotivo());
-        cita.setObservaciones(dto.getObservaciones());
-        cita.setEstado("PROGRAMADA");
-
-        return citaRepository.save(cita);
+        // 5. Guardar sin errores de Hibernate
+        return citaRepository.save(nuevaCita);
     }
 
     // Listar citas por paciente

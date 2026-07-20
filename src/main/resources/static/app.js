@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8080/api";
+const API_URL = "/api";
 let miUsuarioActual = null;
 let miPacienteId = null;
 let miUsername = null;
@@ -114,6 +114,8 @@ async function procesarRegistro() {
         return;
     }
 
+    const especialidadVal = document.getElementById("reg-esp").value;
+
     const nuevoUsuario = {
         nombre: document.getElementById("reg-nombre").value.trim(),
         username: document.getElementById("reg-username").value.trim(),
@@ -121,6 +123,7 @@ async function procesarRegistro() {
         email: document.getElementById("reg-email").value.trim(),
         dpi: document.getElementById("reg-dpi").value.trim(),
         telefono: telefono,
+        especialidad: especialidadVal,
         nit: "CF"
     };
 
@@ -210,10 +213,10 @@ async function renderizarMisCitas() {
             let btnCancelar = "";
 
             if (c.estado === "CANCELADA") badge = "bg-danger";
-            if (c.estado === "ATENDIDA") badge = "bg-success";
+            if (c.estado === "ATENDIDA" || c.estado === "COMPLETADA") badge = "bg-success";
             if (c.estado === "EN_SALA_DE_ESPERA") badge = "bg-info text-dark font-weight-bold";
 
-            if (c.estado === "PROGRAMADA" || c.estado === "EN_SALA_DE_ESPERA") {
+            if (c.estado === "PROGRAMADA" || c.estado === "AGENDADA" || c.estado === "EN_SALA_DE_ESPERA") {
                 btnCancelar = `
                     <button onclick="cancelarCitaPaciente(${c.id})" class="btn btn-outline-danger btn-sm mt-2 font-weight-bold">
                         ❌ Cancelar Cita
@@ -282,7 +285,7 @@ async function agendarCitaPaciente() {
 
         if (respuesta.ok) {
             alertBox.className = "alert alert-success";
-            alertBox.innerText = "✅ " + datos.mensaje;
+            alertBox.innerText = "✅ " + (datos.mensaje || "Cita agendada exitosamente.");
             alertBox.style.display = "block";
 
             document.getElementById("cita-motivo").value = "";
@@ -292,7 +295,7 @@ async function agendarCitaPaciente() {
             renderizarMisCitas();
         } else {
             alertBox.className = "alert alert-danger";
-            alertBox.innerText = "❌ " + datos.error;
+            alertBox.innerText = "❌ " + (datos.error || "El médico o el paciente ya tienen un compromiso en este horario.");
             alertBox.style.display = "block";
         }
     } catch (error) {
@@ -345,12 +348,18 @@ async function cargarAgendaMedico(idMedico) {
         tabla.innerHTML = "";
         misCitas.forEach(c => {
             let vitales = `<span class="badge bg-info text-dark font-monospace fs-6 px-2 py-1 shadow-sm">${c.observaciones || 'Triage tomado'}</span>`;
+            let pacId = c.paciente ? c.paciente.id : null;
+            let botonExpediente = pacId ?
+                `<button onclick="verExpedientePaciente(${pacId})" class="btn btn-outline-primary btn-sm mb-1 font-weight-bold" title="Ver Historial">📋 Ver Expediente</button><br>` : '';
 
             tabla.innerHTML += `
                 <tr id="fila-medico-${c.id}">
                     <td><strong class="text-primary font-monospace">${c.fechaHora.replace('T', ' ')}</strong></td>
                     <td><strong class="fs-6">${c.paciente ? c.paciente.nombre : 'Anónimo'}</strong></td>
-                    <td><span class="font-monospace text-muted">${c.paciente ? c.paciente.dpi : 'N/A'}</span></td>
+                    <td>
+                        ${botonExpediente}
+                        <span class="font-monospace text-muted">DPI: ${c.paciente ? c.paciente.dpi : 'N/A'}</span>
+                    </td>
                     <td>${c.motivo}</td>
                     <td>${vitales}</td>
                     <td>
@@ -411,7 +420,6 @@ async function guardarRecetaInline(citaId, nombrePaciente) {
     }
 
     try {
-        // CORRECCIÓN CLAVE: Ahora llamamos a /citas/atender/ en lugar de /triage/
         const respuesta = await fetch(`${API_URL}/citas/atender/${citaId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -438,8 +446,8 @@ async function cargarTriageEnfermeria() {
         const respuesta = await fetch(`${API_URL}/citas/todas`);
         const citas = await respuesta.json();
 
-        // BLINDAJE POR ESTADO: Si ya está EN_SALA_DE_ESPERA o ATENDIDA, jamás volverá a aparecer aquí
-        const pendientes = citas.filter(c => c.estado !== "EN_SALA_DE_ESPERA" && c.estado !== "ATENDIDA" && c.estado !== "CANCELADA");
+        // BLINDAJE POR ESTADO: Si ya está EN_SALA_DE_ESPERA, ATENDIDA o COMPLETADA, jamás volverá a aparecer aquí
+        const pendientes = citas.filter(c => c.estado !== "EN_SALA_DE_ESPERA" && c.estado !== "ATENDIDA" && c.estado !== "COMPLETADA" && c.estado !== "CANCELADA");
 
         if (pendientes.length === 0) {
             tabla.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted font-weight-bold">✅ No hay pacientes pendientes de tomar signos vitales en la sala de espera.</td></tr>`;
@@ -448,11 +456,19 @@ async function cargarTriageEnfermeria() {
 
         tabla.innerHTML = "";
         pendientes.forEach(c => {
+            let pacId = c.paciente ? c.paciente.id : null;
+            let botonExpediente = pacId ?
+                `<button onclick="verExpedientePaciente(${pacId})" class="btn btn-outline-info btn-sm text-dark font-weight-bold mt-1" title="Ver Antecedentes">📋 Ver Expediente</button>` : '';
+
             tabla.innerHTML += `
                 <tr id="fila-paciente-${c.id}">
                     <td><strong>#${c.id}</strong></td>
                     <td><span class="font-monospace">${c.fechaHora.replace('T', ' ')}</span></td>
-                    <td><strong class="text-dark fs-6">${c.paciente ? c.paciente.nombre : 'Anónimo'}</strong><br><small class="text-muted">DPI: ${c.paciente ? c.paciente.dpi : ''}</small></td>
+                    <td>
+                        <strong class="text-dark fs-6">${c.paciente ? c.paciente.nombre : 'Anónimo'}</strong><br>
+                        <small class="text-muted">DPI: ${c.paciente ? c.paciente.dpi : ''}</small><br>
+                        ${botonExpediente}
+                    </td>
                     <td><strong class="text-primary fs-6">${c.medico ? c.medico.nombre : 'Sin Asignar'}</strong></td>
                     <td><span class="badge bg-light text-dark border">${c.medico && c.medico.especialidad ? c.medico.especialidad : 'General'}</span></td>
                     <td><span class="badge bg-warning text-dark font-weight-bold px-2 py-1">⚠️ Sin Signos (Pendiente)</span></td>
@@ -568,7 +584,7 @@ async function cargarTodasLasCitasAdmin() {
         citas.forEach(c => {
             let badge = "bg-primary";
             if (c.estado === "CANCELADA") badge = "bg-danger";
-            if (c.estado === "ATENDIDA") badge = "bg-success";
+            if (c.estado === "ATENDIDA" || c.estado === "COMPLETADA") badge = "bg-success";
             if (c.estado === "EN_SALA_DE_ESPERA") badge = "bg-info text-dark font-weight-bold";
 
             let precio = c.medico && c.medico.precioConsulta ? `Q. ${c.medico.precioConsulta.toFixed(2)}` : "N/A";
@@ -711,7 +727,6 @@ async function cargarUsuariosAdmin() {
                 </div>
                 `;
 
-            // 1. Fila principal con los datos actuales
             tabla.innerHTML += `
                 <tr id="fila-user-${u.id}">
                     <td><strong>#${u.id}</strong></td>
@@ -724,11 +739,11 @@ async function cargarUsuariosAdmin() {
                     <td class="text-center">${botonesAccion}</td>
                 </tr>
 
-                <!-- 2. FILA DESPLEGABLE DE EDICIÓN EN LÍNEA (Oculta por defecto) -->
+                <!-- FILA DESPLEGABLE DE EDICIÓN EN LÍNEA -->
                 <tr id="caja-editar-${u.id}" style="display: none;" class="bg-light">
                     <td colspan="8" class="p-3 border-bottom border-primary shadow-inner">
                         <div class="card card-body border-primary bg-white shadow-sm p-3">
-                            <h6 class="font-weight-bold text-primary mb-3">✏️ Modifying Datos de: <span class="text-dark">${u.nombre}</span> (DPI: ${u.dpi})</h6>
+                            <h6 class="font-weight-bold text-primary mb-3">✏️ Modificando Datos de: <span class="text-dark">${u.nombre}</span> (DPI: ${u.dpi})</h6>
                             <div class="row g-2 align-items-end">
                                 <div class="col-md-3">
                                     <label class="form-label small font-weight-bold mb-1">Nombre Completo</label>
@@ -767,11 +782,9 @@ async function cargarUsuariosAdmin() {
     }
 }
 
-// NUEVA FUNCIÓN: Abre y cierra la tarjeta de edición debajo del usuario
 function toggleFilaEditarUsuario(idUsuario) {
     const filaEdicion = document.getElementById(`caja-editar-${idUsuario}`);
     if (filaEdicion.style.display === "none") {
-        // Cierra otras tarjetas abiertas para mantener limpieza visual
         document.querySelectorAll("[id^='caja-editar-']").forEach(f => f.style.display = "none");
         filaEdicion.style.display = "table-row";
         document.getElementById(`edit-nom-${idUsuario}`).focus();
@@ -780,7 +793,6 @@ function toggleFilaEditarUsuario(idUsuario) {
     }
 }
 
-// NUEVA FUNCIÓN: Envía el PUT a PostgreSQL con los datos actualizados
 async function guardarEdicionUsuario(idUsuario, nombreAntiguo) {
     const nomVal = document.getElementById(`edit-nom-${idUsuario}`).value.trim();
     const telVal = document.getElementById(`edit-tel-${idUsuario}`).value.trim();
@@ -814,7 +826,7 @@ async function guardarEdicionUsuario(idUsuario, nombreAntiguo) {
 
         if (respuesta.ok) {
             alert(`✅ ¡Los datos de "${nomVal}" han sido actualizados exitosamente en PostgreSQL!`);
-            cargarUsuariosAdmin(); // Refresca la tabla al instante para mostrar los nuevos valores
+            cargarUsuariosAdmin();
         } else {
             const errorData = await respuesta.json().catch(() => ({}));
             alert("❌ Error al modificar: " + (errorData.error || "No se pudieron guardar los cambios en la base de datos."));
@@ -824,6 +836,7 @@ async function guardarEdicionUsuario(idUsuario, nombreAntiguo) {
         console.error(error);
     }
 }
+
 async function eliminarUsuario(idUsuario, nombreUsuario) {
     if (!confirm(`⚠️ ¿Estás completamente seguro de que deseas eliminar permanentemente a:\n\n👤 "${nombreUsuario}"?\n\nEsta acción borrará su acceso del hospital.`)) {
         return;
@@ -843,6 +856,53 @@ async function eliminarUsuario(idUsuario, nombreUsuario) {
         }
     } catch (error) {
         alert("❌ Error de comunicación con el servidor al intentar eliminar.");
+    }
+}
+
+// =========================================================================
+// VISUALIZADOR MAGNO DE EXPEDIENTES CLÍNICOS (MODAL CONECTADO)
+// =========================================================================
+async function verExpedientePaciente(pacienteId) {
+    const contenedor = document.getElementById("exp-contenido");
+    const modalElement = document.getElementById('modalExpediente');
+
+    if (!modalElement) {
+        alert("⚠️ Error: No se encontró el componente del modal en el HTML. Asegúrate de haber actualizado también el archivo index.html.");
+        return;
+    }
+
+    const modal = new bootstrap.Modal(modalElement);
+
+    contenedor.innerHTML = `<p class="text-center text-muted py-3">🔍 Consultando expediente en PostgreSQL...</p>`;
+    modal.show();
+
+    try {
+        const respuesta = await fetch(`${API_URL}/expedientes/paciente/${pacienteId}`);
+
+        if (!respuesta.ok) {
+            contenedor.innerHTML = `
+                <div class="alert alert-warning text-center m-0">
+                    ⚠️ Este paciente aún no cuenta con un expediente clínico registrado en la base de datos del hospital.
+                </div>`;
+            return;
+        }
+
+        const exp = await respuesta.json();
+
+        contenedor.innerHTML = `
+            <div class="border-bottom pb-2 mb-3 text-center">
+                <h4 class="text-primary font-monospace mb-0">${exp.numeroExpediente || 'Sin número'}</h4>
+                <small class="text-muted">ID de Registro Hospitalario: #${exp.id}</small>
+            </div>
+            <p class="mb-2"><strong>🩸 Tipo de Sangre:</strong> <span class="badge bg-danger fs-6">${exp.tipoSangre || 'No registrado'}</span></p>
+            <p class="mb-2"><strong>⚠️ Alergias Conocidas:</strong> <span class="text-dark">${exp.alergias || 'Ninguna'}</span></p>
+            <p class="mb-2"><strong>🏥 Antecedentes Médicos:</strong> <br><span class="text-muted">${exp.antecedentesMedicos || 'Sin antecedentes relevantes'}</span></p>
+            <hr>
+            <p class="mb-0 text-danger"><strong>🚨 Contacto de Emergencia:</strong> <br><span>${exp.contactoEmergencia || 'No especificado'}</span></p>
+        `;
+    } catch (error) {
+        console.error("Error al obtener el expediente:", error);
+        contenedor.innerHTML = `<div class="alert alert-danger">Error de red al intentar conectar con el endpoint del expediente.</div>`;
     }
 }
 

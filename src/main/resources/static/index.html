@@ -91,7 +91,7 @@
     <!-- VISTA DE ACCESO 3: REGISTRO DE EXPEDIENTE (NUEVO PACIENTE)-->
     <!-- ========================================================= -->
     <div id="view-reg" class="section-view row justify-content-center">
-        <div class="col-md-6">
+        <div class="col-md-7">
             <div class="card mt-3 border-0">
                 <div class="card-header bg-success text-white text-center py-3">
                     <h4 class="mb-0">📝 Crear Expediente / Nuevo Registro</h4>
@@ -102,14 +102,31 @@
                     </div>
                     <div id="reg-alert" class="alert" style="display: none;"></div>
                     <form onsubmit="event.preventDefault(); procesarRegistro();">
-                        <div class="mb-3">
-                            <label class="form-label font-weight-bold">Número de DPI / CUI</label>
-                            <input type="text" id="reg-dpi" class="form-control bg-light font-monospace font-weight-bold" readonly required>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label font-weight-bold">Número de DPI / CUI</label>
+                                <input type="text" id="reg-dpi" class="form-control bg-light font-monospace font-weight-bold" readonly required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label font-weight-bold">Nombre Completo</label>
+                                <input type="text" id="reg-nombre" class="form-control" placeholder="Ej: Juan Pérez" required>
+                            </div>
                         </div>
+
+                        <!-- Selector de especialidad médica requerida por el paciente -->
                         <div class="mb-3">
-                            <label class="form-label font-weight-bold">Nombre Completo</label>
-                            <input type="text" id="reg-nombre" class="form-control" placeholder="Ej: Juan Pérez" required>
+                            <label class="form-label font-weight-bold text-success">🩺 ¿Qué especialidad médica requiere consultar?</label>
+                            <select id="reg-esp" class="form-select border-success font-weight-bold" required>
+                                <option value="Medicina General">Medicina General (Evaluación básica)</option>
+                                <option value="Cardiología">Cardiología</option>
+                                <option value="Pediatría">Pediatría</option>
+                                <option value="Ginecología y Obstetricia">Ginecología y Obstetricia</option>
+                                <option value="Traumatología">Traumatología</option>
+                                <option value="Neurología">Neurología</option>
+                                <option value="Dermatología">Dermatología</option>
+                            </select>
                         </div>
+
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label font-weight-bold">Nombre de Usuario</label>
@@ -130,7 +147,7 @@
                                 <input type="text" id="reg-tel" class="form-control" maxlength="8" required>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-success w-100 py-2 font-weight-bold">Registrar Cuenta en el HIS</button>
+                        <button type="submit" class="btn btn-success w-100 py-2 font-weight-bold fs-5 shadow">Registrar Cuenta en el HIS</button>
                         <button type="button" onclick="logout()" class="btn btn-link w-100 mt-2 text-muted btn-sm">← Regresar a consulta de DPI</button>
                     </form>
                 </div>
@@ -313,7 +330,7 @@
             </div>
         </div>
 
-        <!-- PESTAÑA 2: ALTA DE PERSONAL MULTIFUNCIÓN (MÉDICOS, ENFERMERÍA Y RECEPCIÓN) -->
+        <!-- PESTAÑA 2: ALTA DE PERSONAL MULTIFUNCIÓN -->
         <div id="panel-crear-medico" class="admin-pestana">
             <div class="row justify-content-center">
                 <div class="col-md-8">
@@ -325,8 +342,7 @@
                             <div id="medico-alert" class="alert" style="display: none;"></div>
                             <form id="form-alta-personal" onsubmit="event.preventDefault(); crearPersonalAdmin();">
 
-
-                                <!-- Selector de Tipo de Personal (Sin Triage) -->
+                                <!-- Selector de Tipo de Personal -->
                                 <div class="mb-4">
                                     <label class="form-label font-weight-bold text-success">📌 Tipo de Empleado / Rol a Asignar</label>
                                     <select id="emp-rol" class="form-select font-weight-bold border-success" onchange="alternarCamposMedico()" required>
@@ -402,7 +418,7 @@
         <div id="panel-directorio" class="admin-pestana">
             <div class="card border-secondary">
                 <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                    <span>👥 Directorio General de Usuarios </span>
+                    <span>👥 Directorio General de Usuarios</span>
                     <button onclick="cargarUsuariosAdmin()" class="btn btn-sm btn-outline-light">🔄 Actualizar</button>
                 </div>
                 <div class="card-body p-0 table-responsive">
@@ -420,7 +436,7 @@
                         </tr>
                         </thead>
                         <tbody id="tabla-usuarios-admin">
-                        <tr><td colspan="7" class="text-center py-3">Cargando registros...</td></tr>
+                        <tr><td colspan="8" class="text-center py-3">Cargando registros...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -430,6 +446,30 @@
 
 </div>
 
+<!-- ========================================================= -->
+<!-- MODAL UNIVERSAL PARA VISUALIZAR EXPEDIENTES CLÍNICOS      -->
+<!-- ========================================================= -->
+<div class="modal fade" id="modalExpediente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title font-weight-bold">📋 Expediente Clínico Electrónico</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="exp-contenido">
+                    <p class="text-center text-muted py-3">Cargando información desde la base de datos...</p>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar Ventana</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap 5 JS Bundle CDN -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <!-- Script de lógica conectada al Backend -->
 <script src="app.js"></script>
 <script>

@@ -42,4 +42,7 @@ public class Cita {
     // Observaciones adicionales (opcional)
     @Column(name = "observaciones", length = 500)
     private String observaciones;
+    private LocalDateTime fechaHoraInicio;
+    private LocalDateTime fechaHoraFin;
+
 }
