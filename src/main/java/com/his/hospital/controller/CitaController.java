@@ -20,8 +20,8 @@ public class CitaController {
     @Autowired
     private CitaService citaService;
 
-    // Endpoint para agendar cita (POST /api/citas/agendar)
-    @PostMapping("/agendar")
+    // CORRECCIÓN: Ahora escucha en POST /api/citas Y TAMBIÉN en POST /api/citas/agendar
+    @PostMapping({"", "/", "/agendar"})
     public ResponseEntity<?> agendar(@RequestBody CitaDTO dto) {
         Map<String, Object> respuesta = new HashMap<>();
         try {
@@ -68,16 +68,17 @@ public class CitaController {
     public ResponseEntity<List<Cita>> verTodasLasCitas() {
         return new ResponseEntity<>(citaService.obtenerTodasLasCitas(), HttpStatus.OK);
     }
+
     @PutMapping("/triage/{id}")
     public ResponseEntity<?> registrarTriage(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         try {
-            // Llamamos al servicio en lugar de tocar el repositorio directamente
             citaService.registrarTriage(id, payload.get("observaciones"));
             return ResponseEntity.ok().body(Map.of("mensaje", "Signos vitales registrados con éxito"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
     @PutMapping("/atender/{id}")
     public ResponseEntity<?> atenderCita(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         try {
@@ -87,5 +88,4 @@ public class CitaController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
-
 }

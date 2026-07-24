@@ -1,27 +1,32 @@
 package com.his.hospital.dto;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.his.hospital.entity.Sucursal;
+import com.his.hospital.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class CitaDTO {
-    @JsonProperty("pacienteId")
-    private Long pacienteId;       // ID del paciente que solicita la cita
-    @JsonProperty("medicoId") // También puedes probar con "medico" o "medico_id" según tu app.js
-    private Long medicoId;         // ID del médico elegido
-    private LocalDateTime fechaHora; // Formato esperado: "2026-07-15T09:30:00"
-    private String motivo;         // Motivo de la consulta
-    private String observaciones;  // Opcional
+    // Variables planas (para cuando JS envía medicoId: 1)
+    private Long id;
+    private Long medicoId;
+    private Long pacienteId;
+    private Long sucursalId;
 
+    // Objetos anidados como respaldo (para cuando JS envía medico: { id: 1 })
+    private User medico;
+    private User paciente;
+    private Sucursal sucursal;
 
-
-
-
-
-
+    // Datos generales de la cita
+    private String especialidad;
+    private LocalDateTime fechaHora;
+    private String motivo;
+    private String observaciones;
+    private String estado;
 }

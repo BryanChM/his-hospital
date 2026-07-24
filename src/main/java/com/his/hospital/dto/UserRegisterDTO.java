@@ -1,7 +1,9 @@
 package com.his.hospital.dto;
 
+import com.his.hospital.entity.Role;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import com.his.hospital.entity.Sucursal;
 import lombok.NoArgsConstructor;
 
 @Data
@@ -16,7 +18,13 @@ public class UserRegisterDTO {
     private String telefono;
     private String nit;
 
-    // Campos nuevos para registrar doctores desde el panel de administración
+    // Campos nuevos para registrar personal desde el panel de administración
     private String especialidad;
     private Double precioConsulta;
+    private Long sucursalId;
+    private Sucursal sucursal;
+
+    // Variable necesaria para que UserService pueda ejecutar dto.getRole()
+    private Role role;
+
 }

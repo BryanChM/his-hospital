@@ -2,8 +2,10 @@ package com.his.hospital.service;
 
 import com.his.hospital.dto.UserRegisterDTO;
 import com.his.hospital.entity.Role;
+import com.his.hospital.entity.Sucursal;
 import com.his.hospital.entity.User;
 import com.his.hospital.repository.RoleRepository;
+import com.his.hospital.repository.SucursalRepository;
 import com.his.hospital.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,9 @@ public class UserService {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private SucursalRepository sucursalRepository;
 
     // --- REGISTRO INTELIGENTE USANDO UserRegisterDTO ---
     public User registrarUsuario(UserRegisterDTO dto) {
@@ -45,29 +50,50 @@ public class UserService {
         usuario.setDpi(dto.getDpi());
         usuario.setTelefono(dto.getTelefono());
         usuario.setNit(dto.getNit() != null ? dto.getNit() : "CF");
+
+        // Asignación de especialidad y precio (Solo para personal clínico)
         usuario.setEspecialidad(dto.getEspecialidad());
         usuario.setPrecioConsulta(dto.getPrecioConsulta());
 
-        // LÓGICA DE ROLES AJUSTADA CON SETTERS:
-        if (dto.getEspecialidad() != null && !dto.getEspecialidad().trim().isEmpty()) {
-            Role rolMedico = roleRepository.findByNombre("MEDIC")
-                    .orElseGet(() -> {
-                        Role r = new Role();
-                        r.setNombre("MEDIC");
-                        r.setDescripcion("Personal Médico");
-                        return roleRepository.save(r);
-                    });
-            usuario.setRole(rolMedico);
+        // --------------------------------------------------------
+        // --- LÓGICA BLINDADA PARA ASIGNAR LA SUCURSAL ---
+        // --------------------------------------------------------
+        if (dto.getSucursal() != null && dto.getSucursal().getId() != null) {
+            // Caso 1: El frontend envió un objeto { sucursal: { id: 1 } }
+            Sucursal sucursalAsignada = sucursalRepository.findById(dto.getSucursal().getId())
+                    .orElseThrow(() -> new RuntimeException("La sucursal seleccionada no existe"));
+            usuario.setSucursal(sucursalAsignada);
+
+        } else if (dto.getSucursalId() != null) {
+            // Caso 2: El frontend envió directamente el número sucursalId: 1
+            Sucursal sucursalAsignada = sucursalRepository.findById(dto.getSucursalId())
+                    .orElseThrow(() -> new RuntimeException("La sucursal seleccionada no existe"));
+            usuario.setSucursal(sucursalAsignada);
+
         } else {
-            Role rolPaciente = roleRepository.findByNombre("PACIENTE")
-                    .orElseGet(() -> {
-                        Role r = new Role();
-                        r.setNombre("PACIENTE");
-                        r.setDescripcion("Paciente del Hospital");
-                        return roleRepository.save(r);
-                    });
-            usuario.setRole(rolPaciente);
+            // Caso 3: Es un paciente o usuario sin ubicación fija
+            usuario.setSucursal(null);
         }
+        // --------------------------------------------------------
+
+        // --- LÓGICA DE ROLES BLINDADA ---
+        String nombreRolObjetivo = "PACIENTE";
+
+        if (dto.getRole() != null && dto.getRole().getNombre() != null && !dto.getRole().getNombre().trim().isEmpty()) {
+            nombreRolObjetivo = dto.getRole().getNombre().toUpperCase().trim();
+        } else if (dto.getEspecialidad() != null && !dto.getEspecialidad().trim().isEmpty() && dto.getPrecioConsulta() != null) {
+            nombreRolObjetivo = "MEDIC";
+        }
+
+        final String rolFinal = nombreRolObjetivo;
+        Role rolAsignado = roleRepository.findByNombre(rolFinal)
+                .orElseGet(() -> {
+                    Role r = new Role();
+                    r.setNombre(rolFinal);
+                    r.setDescripcion("Rol del sistema: " + rolFinal);
+                    return roleRepository.save(r);
+                });
+        usuario.setRole(rolAsignado);
 
         usuario.setIntentosFallidos(0);
         usuario.setCuentaBloqueada(false);
@@ -87,7 +113,7 @@ public class UserService {
 
         // Verificar si la cuenta fue bloqueada usando el getter correcto
         if (usuario.getCuentaBloqueada() != null && usuario.getCuentaBloqueada()) {
-            throw new RuntimeException("🔒 Cuenta bloqueada por seguridad tras 5 intentos fallidos. Contacte a Administración.");
+            throw new RuntimeException("Cuenta bloqueada por seguridad tras 5 intentos fallidos. Contacte a Administración.");
         }
 
         if (!usuario.getPassword().equals(password)) {
@@ -97,7 +123,7 @@ public class UserService {
             if (intentos >= 5) {
                 usuario.setCuentaBloqueada(true);
                 userRepository.save(usuario);
-                throw new RuntimeException("🔒 Cuenta bloqueada automáticamente tras alcanzar 5 intentos fallidos.");
+                throw new RuntimeException("Cuenta bloqueada automáticamente tras alcanzar 5 intentos fallidos.");
             }
 
             userRepository.save(usuario);
@@ -122,24 +148,23 @@ public class UserService {
     public Optional<User> buscarPorDpi(String dpi) {
         return userRepository.findByDpi(dpi);
     }
+
     public User buscarPorUsername(String username) {
-        // Si tu repositorio aquí adentro se llama diferente (ej: repository o usuarioRepository), cámbialo en esta línea:
         return userRepository.findByUsername(username).orElse(null);
     }
+
     public boolean eliminarUsuario(Long id) {
-        // Verificamos si existe antes de borrar
         if (userRepository.existsById(id)) {
             userRepository.deleteById(id);
             return true;
         }
         return false;
     }
+
     public User actualizarUsuario(Long id, User datosActualizados) {
-        // Buscamos al usuario existente en PostgreSQL
         User usuario = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
 
-        // Actualizamos únicamente los campos modificables (Perfil y Tarifas)
         usuario.setNombre(datosActualizados.getNombre());
         usuario.setEmail(datosActualizados.getEmail());
         usuario.setTelefono(datosActualizados.getTelefono());
@@ -148,5 +173,4 @@ public class UserService {
 
         return userRepository.save(usuario);
     }
-
 }
