@@ -14,7 +14,8 @@ import java.util.List;
 
 @Service
 public class CitaService {
-
+    @Autowired
+    private EmailService emailService;
     @Autowired
     private UserRepository userRepository;
 
@@ -76,7 +77,26 @@ public class CitaService {
         nuevaCita.setObservaciones(dto.getObservaciones() != null ? dto.getObservaciones().trim() : "");
         nuevaCita.setEstado("AGENDADA");
 
-        return citaRepository.save(nuevaCita);
+        Cita citaGuardada = citaRepository.save(nuevaCita);
+
+        String fechaLimpia = dto.getFechaHora().toString().replace("T", " a las ") + " hrs";
+        String asuntoCita = " Confirmación de Cita Médica - Hospital HIS";
+        String cuerpoCita = "Hola " + paciente.getNombre() + ",\n\n" +
+                "Te confirmamos que tu cita médica ha sido programada y registrada en nuestro sistema clínico.\n\n" +
+                " DETALLES DE TU CONSULTA:\n" +
+                "--------------------------------------------------\n" +
+                "• Fecha y Hora: " + fechaLimpia + "\n" +
+                "• Médico Especialista: Dr(a). " + medico.getNombre() + "\n" +
+                "• Especialidad / Clínica: " + medico.getEspecialidad() + "\n" +
+                "• Motivo registrado: " + dto.getMotivo() + "\n" +
+                "--------------------------------------------------\n\n" +
+                " RECOMENDACIÓN:\n" +
+                "Por favor preséntate en la recepción de la clínica 15 minutos antes de tu horario programado con tu DPI en mano para la toma de signos vitales (Triage).\n\n" +
+                "¡Esperamos verte pronto!\nPortal Clínico Hospital HIS";
+
+        emailService.enviarCorreo(paciente.getEmail(), asuntoCita, cuerpoCita);
+
+        return citaGuardada;
     }
 
     // Listar citas por paciente

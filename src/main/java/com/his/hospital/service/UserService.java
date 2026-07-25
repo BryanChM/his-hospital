@@ -7,6 +7,7 @@ import com.his.hospital.entity.User;
 import com.his.hospital.repository.RoleRepository;
 import com.his.hospital.repository.SucursalRepository;
 import com.his.hospital.repository.UserRepository;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,8 @@ import java.util.Optional;
 
 @Service
 public class UserService {
+    @Autowired
+    private EmailService emailService;
 
     @Autowired
     private UserRepository userRepository;
@@ -27,7 +30,7 @@ public class UserService {
     @Autowired
     private SucursalRepository sucursalRepository;
 
-    // --- REGISTRO INTELIGENTE USANDO UserRegisterDTO ---
+
     public User registrarUsuario(UserRegisterDTO dto) {
         if (dto.getDpi() == null || dto.getDpi().length() != 13) {
             throw new RuntimeException("Error: El DPI debe contener exactamente 13 dígitos.");
@@ -51,32 +54,30 @@ public class UserService {
         usuario.setTelefono(dto.getTelefono());
         usuario.setNit(dto.getNit() != null ? dto.getNit() : "CF");
 
-        // Asignación de especialidad y precio (Solo para personal clínico)
+
         usuario.setEspecialidad(dto.getEspecialidad());
         usuario.setPrecioConsulta(dto.getPrecioConsulta());
 
-        // --------------------------------------------------------
-        // --- LÓGICA BLINDADA PARA ASIGNAR LA SUCURSAL ---
-        // --------------------------------------------------------
+
         if (dto.getSucursal() != null && dto.getSucursal().getId() != null) {
-            // Caso 1: El frontend envió un objeto { sucursal: { id: 1 } }
+
             Sucursal sucursalAsignada = sucursalRepository.findById(dto.getSucursal().getId())
                     .orElseThrow(() -> new RuntimeException("La sucursal seleccionada no existe"));
             usuario.setSucursal(sucursalAsignada);
 
         } else if (dto.getSucursalId() != null) {
-            // Caso 2: El frontend envió directamente el número sucursalId: 1
+
             Sucursal sucursalAsignada = sucursalRepository.findById(dto.getSucursalId())
                     .orElseThrow(() -> new RuntimeException("La sucursal seleccionada no existe"));
             usuario.setSucursal(sucursalAsignada);
 
         } else {
-            // Caso 3: Es un paciente o usuario sin ubicación fija
+
             usuario.setSucursal(null);
         }
-        // --------------------------------------------------------
 
-        // --- LÓGICA DE ROLES BLINDADA ---
+
+
         String nombreRolObjetivo = "PACIENTE";
 
         if (dto.getRole() != null && dto.getRole().getNombre() != null && !dto.getRole().getNombre().trim().isEmpty()) {
@@ -98,47 +99,65 @@ public class UserService {
         usuario.setIntentosFallidos(0);
         usuario.setCuentaBloqueada(false);
 
-        return userRepository.save(usuario);
+        User usuarioGuardado = userRepository.save(usuario);
+
+
+        String asunto = " ¡Bienvenido al Portal Hospitalario HIS!";
+        String cuerpo = "Hola " + usuarioGuardado.getNombre() + ",\n\n" +
+                "Tu expediente y cuenta en el Hospital HIS han sido creados exitosamente.\n\n" +
+                " TUS DATOS Y CREDENCIALES DE ACCESO:\n" +
+                "--------------------------------------------------\n" +
+                "• Usuario de ingreso: " + usuarioGuardado.getUsername() + "\n" +
+                "• Rol asignado: " + usuarioGuardado.getRole().getNombre() + "\n" +
+                "• DPI / Expediente: " + usuarioGuardado.getDpi() + "\n" +
+                "--------------------------------------------------\n\n" +
+                "Por seguridad, no compartas estas credenciales con nadie. Ya puedes iniciar sesión desde nuestro portal web.\n\n" +
+                "Atentamente,\nAdministración del Hospital HIS";
+
+        emailService.enviarCorreo(usuarioGuardado.getEmail(), asunto, cuerpo);
+
+        return usuarioGuardado;
     }
 
-    // --- LOGIN CON BLOQUEO POR FUERZA BRUTA (5 INTENTOS) ---
-    public Map<String, Object> login(String username, String password) {
-        Optional<User> optUser = userRepository.findByUsername(username);
 
-        if (optUser.isEmpty()) {
-            throw new RuntimeException("Error: Credenciales incorrectas o usuario no encontrado.");
+    // ⭐ AQUÍ ESTÁ LA SOLUCIÓN: Evitamos que Spring borre el guardado de BD al lanzar el error
+    @Transactional(noRollbackFor = RuntimeException.class)
+    public User login(String username, String password) {
+        // 1. Buscar al usuario en PostgreSQL
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Error: El usuario '" + username + "' no existe en el sistema."));
+
+        if (Boolean.TRUE.equals(user.getCuentaBloqueada())) {
+            throw new RuntimeException("Error: Esta cuenta se encuentra BLOQUEADA por seguridad tras 5 intentos fallidos. Contacte a un Administrador para desbloquearla.");
         }
 
-        User usuario = optUser.get();
 
-        // Verificar si la cuenta fue bloqueada usando el getter correcto
-        if (usuario.getCuentaBloqueada() != null && usuario.getCuentaBloqueada()) {
-            throw new RuntimeException("Cuenta bloqueada por seguridad tras 5 intentos fallidos. Contacte a Administración.");
-        }
+        if (!user.getPassword().equals(password)) {
+            // Manejo seguro por si la columna intentos_fallidos está en NULL dentro de la base de datos
+            int intentosActuales = (user.getIntentosFallidos() == null) ? 0 : user.getIntentosFallidos();
+            intentosActuales++; // Sumamos 1 al intento fallido
 
-        if (!usuario.getPassword().equals(password)) {
-            int intentos = (usuario.getIntentosFallidos() != null ? usuario.getIntentosFallidos() : 0) + 1;
-            usuario.setIntentosFallidos(intentos);
+            user.setIntentosFallidos(intentosActuales);
 
-            if (intentos >= 5) {
-                usuario.setCuentaBloqueada(true);
-                userRepository.save(usuario);
-                throw new RuntimeException("Cuenta bloqueada automáticamente tras alcanzar 5 intentos fallidos.");
+            // Si con este intento ya llegó a 5, bloqueamos la cuenta
+            if (intentosActuales >= 5) {
+                user.setCuentaBloqueada(true);
+                userRepository.save(user); // Ahora SÍ viajará y se quedará en PostgreSQL
+                System.out.println("🔒 Cuenta bloqueada automáticamente por exceder el límite de fallos: " + username);
+                throw new RuntimeException("Error: Ha superado el límite de 5 intentos fallidos. Su cuenta ha sido BLOQUEADA por seguridad.");
             }
 
-            userRepository.save(usuario);
-            throw new RuntimeException("Error: Contraseña incorrecta. Le quedan " + (5 - intentos) + " intentos.");
+            userRepository.save(user); // Ahora SÍ aumentará el contador en PostgreSQL (1, 2, 3 o 4)
+            System.out.println("⚠️ Intento fallido " + intentosActuales + " de 5 para el usuario: " + username);
+            throw new RuntimeException("Contraseña incorrecta. Intento fallido " + intentosActuales + " de 5.");
         }
 
-        usuario.setIntentosFallidos(0);
-        userRepository.save(usuario);
 
-        Map<String, Object> respuesta = new HashMap<>();
-        respuesta.put("exito", true);
-        respuesta.put("usuario", usuario.getNombre());
-        respuesta.put("rol", usuario.getRole() != null ? usuario.getRole().getNombre() : "GENERAL");
-        respuesta.put("id", usuario.getId());
-        return respuesta;
+        user.setIntentosFallidos(0);
+        user.setCuentaBloqueada(false);
+        userRepository.save(user);
+
+        return user;
     }
 
     public List<User> listarTodos() {
@@ -173,4 +192,17 @@ public class UserService {
 
         return userRepository.save(usuario);
     }
+
+    @Transactional
+    public void desbloquearUsuario(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con el ID: " + id));
+
+        user.setCuentaBloqueada(false); // Quita el candado
+        user.setIntentosFallidos(0);    // Reinicia el contador de intentos a 0
+
+        userRepository.save(user);
+        System.out.println(" Cuenta desbloqueada por el Administrador: " + user.getUsername());
+    }
+
 }

@@ -14,10 +14,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
 @CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/users")
-
 public class UserController {
 
     @Autowired
@@ -47,15 +47,16 @@ public class UserController {
         }
     }
 
-    // POST /api/users/login
+    // POST /api/users/login - CONECTADO CON SEGURIDAD Y BLOQUEO AUTOMÁTICO
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credenciales) {
         String username = credenciales.get("username");
         String password = credenciales.get("password");
 
-        User usuario = userService.buscarPorUsername(username);
+        try {
+            // Llamamos al servicio transaccional que valida intentos y bloqueo
+            User usuario = userService.login(username, password);
 
-        if (usuario != null && usuario.getPassword().equals(password)) {
             String nombreRol = (usuario.getRole() != null) ? usuario.getRole().getNombre().toUpperCase() : "GENERAL";
 
             return ResponseEntity.ok().body(Map.of(
@@ -64,8 +65,9 @@ public class UserController {
                     "username", usuario.getUsername(),
                     "rol", nombreRol
             ));
-        } else {
-            return ResponseEntity.status(401).body(Map.of("error", "Credenciales incorrectas"));
+        } catch (RuntimeException e) {
+            // Capturamos el mensaje exacto (Intento 1 de 5, Cuenta Bloqueada, etc.) y lo enviamos al JS
+            return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
         }
     }
 
@@ -163,5 +165,17 @@ public class UserController {
         return ResponseEntity.status(409).body(Map.of(
                 "error", "Todos los médicos de esta especialidad están ocupados en este horario. Por favor escoja otra fecha u hora."
         ));
+    }
+
+    // PUT /api/users/{id}/desbloquear
+    @PutMapping("/{id}/desbloquear")
+    public ResponseEntity<?> desbloquearUsuario(@PathVariable Long id) {
+        try {
+            userService.desbloquearUsuario(id);
+            return ResponseEntity.ok().body("{\"mensaje\": \"Usuario desbloqueado con éxito\"}");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"" + e.getMessage() + "\"}");
+        }
     }
 }

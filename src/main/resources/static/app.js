@@ -183,10 +183,10 @@ async function procesarRegistro(event) {
 
             if (alertBox) {
                 alertBox.className = "alert alert-success font-weight-bold";
-                alertBox.innerText = "¡Cuenta y Expediente Clínico creados con éxito en PostgreSQL! Redireccionando al portal...";
+                alertBox.innerText = "¡Cuenta y Expediente Clínico creados con éxito .Redireccionando al portal...";
                 alertBox.style.display = "block";
             } else {
-                alert("¡Cuenta y Expediente Clínico creados con éxito en PostgreSQL!");
+                alert("¡Cuenta y Expediente Clínico creados con éxito");
             }
 
             setTimeout(() => {
@@ -787,7 +787,7 @@ async function crearPersonalAdmin(event) {
     } finally {
         if (btnGuardar) {
             btnGuardar.disabled = false;
-            btnGuardar.innerHTML = "Registrar Empleado en PostgreSQL";
+            btnGuardar.innerHTML = "Registrar Empleado";
         }
     }
 }
@@ -844,6 +844,7 @@ function cambiarPagina(delta) {
 
 function renderizarTablaUsuarios() {
     const tabla = document.getElementById("tabla-usuarios-admin");
+    window.usuariosDirectorioCache = typeof listaUsuarios !== 'undefined' ? listaUsuarios : usuariosFiltrados;
     if (!tabla) return;
     const totalRegistros = usuariosFiltrados.length;
 
@@ -876,6 +877,18 @@ function renderizarTablaUsuarios() {
         }
         if (rolNombre === "RECEPCION") colorRol = "bg-warning text-dark";
 
+        let botonDesbloquear = "";
+        if (u.cuentaBloqueada || u.cuenta_bloqueada) {
+            botonDesbloquear = `
+                <li>
+                    <a class="dropdown-item text-success font-weight-bold" href="#" onclick="event.preventDefault(); desbloquearUsuario(${u.id}, '${u.nombre}')">
+                        Desbloquear Cuenta
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+            `;
+        }
+
         let botonesAccion = u.username === miUsuarioActual?.username ?
             '<span class="badge bg-light text-muted border">Mi Cuenta</span>' :
             `
@@ -884,6 +897,9 @@ function renderizarTablaUsuarios() {
                     Acciones
                 </button>
                 <ul class="dropdown-menu shadow">
+                    ${botonDesbloquear}
+                    <li><a class="dropdown-item text-primary font-weight-bold" href="#" onclick="event.preventDefault(); verDetallesUsuario(${u.id})">Ver Detalles</a></li>
+                    <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); toggleFilaEditarUsuario(${u.id})">Editar</a></li>
                     <li><a class="dropdown-item text-danger" href="#" onclick="event.preventDefault(); eliminarUsuario(${u.id}, '${u.nombre}')">Eliminar</a></li>
                 </ul>
@@ -898,7 +914,7 @@ function renderizarTablaUsuarios() {
                 <td><span class="font-monospace">${u.email || '---'}</span></td>
                 <td><span class="badge ${colorRol}">${rolNombre}</span></td>
                 <td><span class="font-monospace text-primary">${u.username || '---'}</span></td>
-                <td>${u.cuentaBloqueada ? '<span class="badge bg-danger">BLOQUEADO</span>' : '<span class="badge bg-success">ACTIVO</span>'}</td>
+                <td>${u.cuentaBloqueada || u.cuenta_bloqueada ? '<span class="badge bg-danger">BLOQUEADO</span>' : '<span class="badge bg-success">ACTIVO</span>'}</td>
                 <td class="text-center">${botonesAccion}</td>
             </tr>
 
@@ -993,7 +1009,7 @@ async function guardarEdicionUsuario(idUsuario, nombreAntiguo) {
         });
 
         if (respuesta.ok) {
-            alert(`Los datos de "${nomVal}" han sido actualizados exitosamente en PostgreSQL.`);
+            alert(`Los datos de "${nomVal}" han sido actualizados exitosamente`);
 
             try {
                 if (typeof registrarAuditoria === "function") {
@@ -1024,7 +1040,7 @@ async function eliminarUsuario(idUsuario, nombreUsuario) {
         });
 
         if (respuesta.ok) {
-            alert(`El usuario "${nombreUsuario}" ha sido eliminado de PostgreSQL.`);
+            alert(`El usuario "${nombreUsuario}" ha sido eliminado`);
             if (typeof registrarAuditoria === "function") {
                 registrarAuditoria("ELIMINACIÓN", `Se eliminó permanentemente del hospital al usuario ID #${idUsuario} (${nombreUsuario})`);
             }
@@ -1049,7 +1065,7 @@ async function verExpedientePaciente(pacienteId) {
 
     const modal = new bootstrap.Modal(modalElement);
 
-    contenedor.innerHTML = `<p class="text-center text-muted py-3">Consultando expediente en PostgreSQL...</p>`;
+    contenedor.innerHTML = `<p class="text-center text-muted py-3">Consultando expediente...</p>`;
     modal.show();
 
     try {
@@ -1187,7 +1203,7 @@ async function cargarSucursalesAdmin() {
             });
         }
     } catch (error) {
-        if (tabla) tabla.innerHTML = `<tr><td colspan="4" class="text-danger text-center">Error al conectar con PostgreSQL</td></tr>`;
+        if (tabla) tabla.innerHTML = `<tr><td colspan="4" class="text-danger text-center">Error al conectar</td></tr>`;
     }
 }
 
@@ -1249,7 +1265,7 @@ async function guardarNuevaSucursal() {
         });
 
         if (respuesta.ok) {
-            alert("La sucursal y sus especialidades fueron guardadas con éxito en PostgreSQL.");
+            alert("La sucursal y sus especialidades fueron guardadas con éxito.");
             document.getElementById("nueva-suc-nombre").value = "";
             document.getElementById("nueva-suc-dir").value = "";
             document.querySelectorAll(".chk-esp").forEach(casilla => casilla.checked = false);
@@ -1453,3 +1469,100 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     }
 });
+function verDetallesUsuario(id) {
+    // 1. Buscar al usuario en la lista temporal que cargó la tabla
+    const u = window.usuariosDirectorioCache?.find(user => user.id === id);
+
+    if (!u) {
+        alert("No se pudieron cargar los detalles. Por favor presione 'Actualizar' en la tabla e intente de nuevo.");
+        return;
+    }
+
+
+    const rolNombre = u.role?.nombre || u.rol || "USUARIO";
+    const sucursalNombre = u.sucursal?.nombre || u.sucursal?.direccion || (u.sucursalId ? `Sucursal #${u.sucursalId}` : null);
+    const estadoTexto = (u.estado === 1 || u.estado === true || u.estado === "ACTIVO") ? "ACTIVO" : "INACTIVO";
+    const colorEstado = estadoTexto === "ACTIVO" ? "success" : "danger";
+
+
+    let camposHtml = "";
+
+
+    camposHtml += `<div class="col-12 mb-2"><small class="text-muted d-block">Nombre Completo:</small><strong>${u.nombre || 'No registrado'}</strong></div>`;
+    if (u.username) camposHtml += `<div class="col-6 mb-2"><small class="text-muted d-block">Usuario:</small><span class="badge bg-secondary">${u.username}</span></div>`;
+    if (rolNombre) camposHtml += `<div class="col-6 mb-2"><small class="text-muted d-block">Rol:</small><span class="badge bg-primary">${rolNombre}</span></div>`;
+    if (u.dpi) camposHtml += `<div class="col-6 mb-2"><small class="text-muted d-block">DPI / CUI:</small><strong>${u.dpi}</strong></div>`;
+    if (u.email) camposHtml += `<div class="col-6 mb-2"><small class="text-muted d-block">Correo Electrónico:</small><strong>${u.email}</strong></div>`;
+
+
+    if (u.telefono && u.telefono !== "") {
+        camposHtml += `<div class="col-6 mb-2"><small class="text-muted d-block"><i class="fas fa-phone me-1"></i>Teléfono:</small><strong>${u.telefono}</strong></div>`;
+    }
+    if (u.nit && u.nit !== "" && u.nit !== "CF") {
+        camposHtml += `<div class="col-6 mb-2"><small class="text-muted d-block"><i class="fas fa-file-invoice-dollar me-1"></i>NIT:</small><strong>${u.nit}</strong></div>`;
+    } else if (u.nit === "CF") {
+        camposHtml += `<div class="col-6 mb-2"><small class="text-muted d-block"><i class="fas fa-file-invoice-dollar me-1"></i>NIT:</small><span class="text-muted">Consumidor Final (CF)</span></div>`;
+    }
+
+
+    if (u.especialidad && u.especialidad !== "" && u.especialidad !== "[NULL]") {
+        camposHtml += `<div class="col-12 mb-2 p-2 bg-light rounded border-start border-info border-4">
+            <small class="text-muted d-block"><i class="fas fa-user-md me-1 text-info"></i>Especialidad Médica:</small>
+            <strong class="text-dark fs-6">${u.especialidad}</strong>
+        </div>`;
+    }
+    if (sucursalNombre) {
+        camposHtml += `<div class="col-12 mb-2"><small class="text-muted d-block"><i class="fas fa-hospital me-1"></i>Clínica / Sucursal Asignada:</small><strong>${sucursalNombre}</strong></div>`;
+    }
+
+
+    camposHtml += `<hr class="my-2">`;
+    camposHtml += `<div class="col-6 mb-1"><small class="text-muted d-block">Estado de la cuenta:</small><span class="badge bg-${colorEstado}">${estadoTexto}</span></div>`;
+    if (u.intentos_fallidos !== undefined && u.intentos_fallidos > 0) {
+        camposHtml += `<div class="col-6 mb-1"><small class="text-muted d-block">Intentos fallidos:</small><span class="badge bg-warning text-dark">${u.intentos_fallidos} de 3</span></div>`;
+    }
+    if (u.cuenta_bloqueada) {
+        camposHtml += `<div class="col-12 mt-2"><div class="alert alert-danger p-2 mb-0 text-center"><i class="fas fa-lock me-1"></i><b>Esta cuenta se encuentra bloqueada por seguridad</b></div></div>`;
+    }
+
+    // 4. Inyectar en el Modal y mostrarlo en pantalla
+    const contenedor = document.getElementById("contenido-detalles-usuario");
+    if (contenedor) {
+        contenedor.innerHTML = `<div class="row g-2">${camposHtml}</div>`;
+        const modal = new bootstrap.Modal(document.getElementById("modalDetallesUsuario"));
+        modal.show();
+    }
+}
+function desbloquearUsuario(id, nombre) {
+    if (!confirm(`¿Estás seguro de que deseas desbloquear y rehabilitar el acceso al usuario: ${nombre}?`)) {
+        return;
+    }
+
+    // Usamos tu variable global API_URL
+    fetch(`${API_URL}/users/${id}/desbloquear`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(response => {
+            if (!response.ok) throw new Error("Error en el servidor al intentar desbloquear.");
+            return response.json();
+        })
+        .then(data => {
+            alert(`La cuenta de ${nombre} ha sido desbloqueada. Ya puede iniciar sesión nuevamente.`);
+
+            // Refrescamos la tabla para que el estado cambie de BLOQUEADO a ACTIVO visualmente
+            if (typeof cargarUsuariosAdmin === "function") {
+                cargarUsuariosAdmin();
+            } else if (typeof cargarDirectorio === "function") {
+                cargarDirectorio();
+            } else {
+                location.reload(); // Opción de respaldo si no encuentra la función de recarga
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            alert("No se pudo desbloquear al usuario. Verifica la conexión con el servidor.");
+        });
+}

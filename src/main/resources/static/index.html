@@ -415,7 +415,7 @@
                                         <input type="text" id="med-tel" class="form-control" placeholder="45789658" maxlength="8" required>
                                     </div>
                                 </div>
-                                <button type="submit" id="btn-guardar-personal" class="btn btn-success w-100 py-3 font-weight-bold fs-5 shadow">Registrar Empleado en PostgreSQL</button>
+                                <button type="submit" id="btn-guardar-personal" class="btn btn-success w-100 py-3 font-weight-bold fs-5 shadow">Registrar Empleado</button>
                             </form>
                         </div>
                     </div>
@@ -462,7 +462,7 @@
                         </div>
 
                         <div class="col-12 d-flex justify-content-end mt-4">
-                            <button onclick="guardarNuevaSucursal()" class="btn btn-success font-weight-bold px-5">Guardar Sucursal en PostgreSQL</button>
+                            <button onclick="guardarNuevaSucursal()" class="btn btn-success font-weight-bold px-5">Guardar Sucursal</button>
                         </div>
                     </div>
                 </div>
@@ -603,5 +603,23 @@
         });
     }
 </script>
+
+<!-- Modal Dinámico para Ver Detalles del Usuario -->
+<div class="modal fade" id="modalDetallesUsuario" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title"><i class="fas fa-id-card me-2"></i>Expediente de Usuario</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4" id="contenido-detalles-usuario">
+                <!-- Aquí se inyectarán los datos dinámicamente con JavaScript -->
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>

@@ -12,7 +12,7 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    // Consultas automáticas generadas por Spring Data JPA
+
     Optional<User> findByUsername(String username);
     Optional<User> findByEmail(String email);
     Optional<User> findByDpi(String dpi);
@@ -20,11 +20,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByDpi(String dpi);
     boolean existsByEmail(String email);
 
-    // 1. Obtiene una lista sin repetidos de las especialidades disponibles en una sucursal específica
+
     @Query("SELECT DISTINCT u.especialidad FROM User u WHERE u.sucursal.id = :sucursalId AND u.especialidad IS NOT NULL AND u.especialidad != ''")
     List<String> findEspecialidadesBySucursal(@Param("sucursalId") Long sucursalId);
 
-    // 2. Obtiene los médicos activos por sucursal y especialidad (Consulta SQL Nativa blindada)
+
     @Query(value = "SELECT * FROM users u " +
             "WHERE u.sucursal_id = :sucursalId " +
             "AND TRIM(UPPER(u.especialidad)) = TRIM(UPPER(:especialidad)) " +
