@@ -1,4 +1,7 @@
-const API_URL = "/api";
+// Si la web se abre en localhost, usa el backend local; si está en internet, usa el backend de Azure
+const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:8080/api'
+    : 'https://hospital-his-acfqghgmgef9gaca.canadacentral-01.azurewebsites.net/api';
 let miUsuarioActual = null;
 let miPacienteId = null;
 let miUsername = null;
