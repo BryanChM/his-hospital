@@ -120,7 +120,7 @@ public class UserService {
     }
 
 
-    // ⭐ AQUÍ ESTÁ LA SOLUCIÓN: Evitamos que Spring borre el guardado de BD al lanzar el error
+
     @Transactional(noRollbackFor = RuntimeException.class)
     public User login(String username, String password) {
         // 1. Buscar al usuario en PostgreSQL
@@ -133,21 +133,21 @@ public class UserService {
 
 
         if (!user.getPassword().equals(password)) {
-            // Manejo seguro por si la columna intentos_fallidos está en NULL dentro de la base de datos
+
             int intentosActuales = (user.getIntentosFallidos() == null) ? 0 : user.getIntentosFallidos();
             intentosActuales++; // Sumamos 1 al intento fallido
 
             user.setIntentosFallidos(intentosActuales);
 
-            // Si con este intento ya llegó a 5, bloqueamos la cuenta
+
             if (intentosActuales >= 5) {
                 user.setCuentaBloqueada(true);
-                userRepository.save(user); // Ahora SÍ viajará y se quedará en PostgreSQL
+                userRepository.save(user);
                 System.out.println("🔒 Cuenta bloqueada automáticamente por exceder el límite de fallos: " + username);
                 throw new RuntimeException("Error: Ha superado el límite de 5 intentos fallidos. Su cuenta ha sido BLOQUEADA por seguridad.");
             }
 
-            userRepository.save(user); // Ahora SÍ aumentará el contador en PostgreSQL (1, 2, 3 o 4)
+            userRepository.save(user);
             System.out.println("⚠️ Intento fallido " + intentosActuales + " de 5 para el usuario: " + username);
             throw new RuntimeException("Contraseña incorrecta. Intento fallido " + intentosActuales + " de 5.");
         }
@@ -198,8 +198,8 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con el ID: " + id));
 
-        user.setCuentaBloqueada(false); // Quita el candado
-        user.setIntentosFallidos(0);    // Reinicia el contador de intentos a 0
+        user.setCuentaBloqueada(false);
+        user.setIntentosFallidos(0);
 
         userRepository.save(user);
         System.out.println(" Cuenta desbloqueada por el Administrador: " + user.getUsername());
