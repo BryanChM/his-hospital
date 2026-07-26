@@ -120,13 +120,11 @@ public class UserController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // GET /api/users/sucursal/{id}/especialidades
     @GetMapping("/sucursal/{id}/especialidades")
     public ResponseEntity<List<String>> listarEspecialidadesPorSucursal(@PathVariable Long id) {
         return ResponseEntity.ok(userRepository.findEspecialidadesBySucursal(id));
     }
 
-    // GET /api/users/sucursal/{id}/especialidad/{esp}
     @GetMapping("/sucursal/{id}/especialidad/{esp}")
     public ResponseEntity<List<User>> listarMedicosPorFiltro(@PathVariable Long id, @PathVariable String esp) {
         String especialidadLimpia = (esp != null) ? esp.trim() : "";
@@ -140,20 +138,17 @@ public class UserController {
             @RequestParam String especialidad,
             @RequestParam String fechaHora) {
 
-        // 1. Limpieza obligatoria del texto para evitar fallos por espacios en blanco
         String especialidadLimpia = (especialidad != null) ? especialidad.trim() : "";
 
         // 2. Buscamos los médicos en PostgreSQL
         List<User> medicos = userRepository.findMedicosBySucursalAndEspecialidad(sucursalId, especialidadLimpia);
 
-        // 3. Validación segura por si la base de datos devuelve nulo o una lista vacía
         if (medicos == null || medicos.isEmpty()) {
             return ResponseEntity.status(404).body(Map.of(
                     "error", "No hay médicos de esta especialidad (" + especialidadLimpia + ") asignados a esta sucursal."
             ));
         }
 
-        // 4. Algoritmo de balanceo de carga: Asigna el turno al primer médico libre en el horario solicitado
         for (User medico : medicos) {
             boolean ocupado = citaRepository.existsByMedicoIdAndFechaHora(medico.getId(), fechaHora);
             if (!ocupado) {
@@ -161,7 +156,6 @@ public class UserController {
             }
         }
 
-        // 5. Si todos los especialistas coinciden en estar ocupados a esa misma hora
         return ResponseEntity.status(409).body(Map.of(
                 "error", "Todos los médicos de esta especialidad están ocupados en este horario. Por favor escoja otra fecha u hora."
         ));

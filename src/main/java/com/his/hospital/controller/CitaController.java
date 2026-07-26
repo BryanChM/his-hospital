@@ -20,7 +20,6 @@ public class CitaController {
     @Autowired
     private CitaService citaService;
 
-    // CORRECCIÓN: Ahora escucha en POST /api/citas Y TAMBIÉN en POST /api/citas/agendar
     @PostMapping({"", "/", "/agendar"})
     public ResponseEntity<?> agendar(@RequestBody CitaDTO dto) {
         Map<String, Object> respuesta = new HashMap<>();
@@ -40,13 +39,17 @@ public class CitaController {
         }
     }
 
-    // Endpoint para ver citas de un paciente (GET /api/citas/paciente/1)
+    // Endpoint para el Paciente
     @GetMapping("/paciente/{pacienteId}")
     public ResponseEntity<List<Cita>> verCitasPaciente(@PathVariable Long pacienteId) {
         return new ResponseEntity<>(citaService.obtenerCitasPorPaciente(pacienteId), HttpStatus.OK);
     }
 
-    // Endpoint para cancelar cita (PUT /api/citas/cancelar/1)
+    @GetMapping("/medico/{medicoId}")
+    public ResponseEntity<List<Cita>> verCitasMedico(@PathVariable Long medicoId) {
+        return new ResponseEntity<>(citaService.obtenerCitasPorMedico(medicoId), HttpStatus.OK);
+    }
+
     @PutMapping("/cancelar/{citaId}")
     public ResponseEntity<?> cancelar(@PathVariable Long citaId) {
         Map<String, Object> respuesta = new HashMap<>();
@@ -63,7 +66,6 @@ public class CitaController {
         }
     }
 
-    // Endpoint para el Administrador: Ver TODAS las citas del hospital (GET /api/citas/todas)
     @GetMapping("/todas")
     public ResponseEntity<List<Cita>> verTodasLasCitas() {
         return new ResponseEntity<>(citaService.obtenerTodasLasCitas(), HttpStatus.OK);

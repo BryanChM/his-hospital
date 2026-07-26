@@ -22,17 +22,14 @@ public class CitaService {
     @Autowired
     private CitaRepository citaRepository;
 
-    // Agendar nueva cita con validación de choques de horario (BLINDADO)
     @Transactional
     public Cita agendarCita(CitaDTO dto) {
-        // 1. EXTRACCIÓN INTELIGENTE DE IDs (Busca tanto en variable plana como en objeto)
         Long idMedicoFinal = (dto.getMedicoId() != null) ? dto.getMedicoId() :
                 (dto.getMedico() != null && dto.getMedico().getId() != null) ? dto.getMedico().getId() : null;
 
         Long idPacienteFinal = (dto.getPacienteId() != null) ? dto.getPacienteId() :
                 (dto.getPaciente() != null && dto.getPaciente().getId() != null) ? dto.getPaciente().getId() : null;
 
-        // 2. Validaciones de seguridad
         if (idMedicoFinal == null) {
             throw new RuntimeException("Error: El ID del médico llegó vacío desde el formulario web.");
         }
@@ -46,15 +43,12 @@ public class CitaService {
             throw new RuntimeException("Error: Debe indicar el motivo de la consulta.");
         }
 
-        // 3. Buscar al médico real en PostgreSQL
         User medico = userRepository.findById(idMedicoFinal)
                 .orElseThrow(() -> new RuntimeException("El médico seleccionado (ID: " + idMedicoFinal + ") no existe en la base de datos."));
 
-        // 4. Buscar al paciente real en PostgreSQL
         User paciente = userRepository.findById(idPacienteFinal)
                 .orElseThrow(() -> new RuntimeException("El paciente seleccionado (ID: " + idPacienteFinal + ") no existe en la base de datos."));
 
-        // 5. Validación de ventana de tiempo (choque de horarios)
         LocalDateTime inicioVentana = dto.getFechaHora().minusMinutes(29);
         LocalDateTime finVentana = dto.getFechaHora().plusMinutes(29);
 
@@ -68,7 +62,6 @@ public class CitaService {
             throw new RuntimeException("Horario no disponible: El médico seleccionado ya tiene una consulta programada en ese rango de hora.");
         }
 
-        // 6. Armar y guardar la cita médica
         Cita nuevaCita = new Cita();
         nuevaCita.setMedico(medico);
         nuevaCita.setPaciente(paciente);
@@ -99,12 +92,14 @@ public class CitaService {
         return citaGuardada;
     }
 
-    // Listar citas por paciente
     public List<Cita> obtenerCitasPorPaciente(Long pacienteId) {
         return citaRepository.findByPacienteIdOrderByFechaHoraDesc(pacienteId);
     }
 
-    // Cancelar cita sin borrar historial
+    public List<Cita> obtenerCitasPorMedico(Long medicoId) {
+        return citaRepository.findByMedicoIdOrderByFechaHoraDesc(medicoId);
+    }
+
     public Cita cancelarCita(Long citaId) {
         Cita cita = citaRepository.findById(citaId)
                 .orElseThrow(() -> new RuntimeException("Error: La cita con ID " + citaId + " no existe."));
@@ -117,12 +112,10 @@ public class CitaService {
         return citaRepository.save(cita);
     }
 
-    // Listar todas las citas para el Administrador
     public List<Cita> obtenerTodasLasCitas() {
         return citaRepository.findAll();
     }
 
-    // Registrar signos vitales (Triage de Enfermería)
     public Cita registrarTriage(Long id, String observaciones) {
         Cita cita = citaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada."));
@@ -133,7 +126,6 @@ public class CitaService {
         return citaRepository.save(cita);
     }
 
-    // Finalizar consulta médica con receta
     public Cita atenderCita(Long id, String receta) {
         Cita cita = citaRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cita no encontrada."));
