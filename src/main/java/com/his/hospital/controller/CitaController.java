@@ -28,10 +28,11 @@ public class CitaController {
             respuesta.put("exito", true);
             respuesta.put("mensaje", "¡Cita agendada exitosamente en el HIS!");
             respuesta.put("cita_id", citaCreada.getId());
-            respuesta.put("paciente", citaCreada.getPaciente().getNombre());
-            respuesta.put("medico", citaCreada.getMedico().getNombre());
+            respuesta.put("paciente_id", citaCreada.getPacienteId());
+            respuesta.put("medico_id", citaCreada.getMedicoId());
             respuesta.put("fecha_hora", citaCreada.getFechaHora());
             return new ResponseEntity<>(respuesta, HttpStatus.CREATED);
+
         } catch (RuntimeException e) {
             respuesta.put("exito", false);
             respuesta.put("error", e.getMessage());
@@ -66,7 +67,8 @@ public class CitaController {
         }
     }
 
-    @GetMapping("/todas")
+    // ¡AQUÍ ESTÁ LA CORRECCIÓN! Ahora acepta GET en "", "/" y "/todas"
+    @GetMapping({"", "/", "/todas"})
     public ResponseEntity<List<Cita>> verTodasLasCitas() {
         return new ResponseEntity<>(citaService.obtenerTodasLasCitas(), HttpStatus.OK);
     }

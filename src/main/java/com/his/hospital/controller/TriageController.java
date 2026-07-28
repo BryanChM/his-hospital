@@ -28,7 +28,7 @@ public class TriageController {
             respuesta.put("exito", true);
             respuesta.put("mensaje", "¡Signos vitales registrados y paciente enviado a sala de espera!");
             respuesta.put("triage_id", triageCreado.getId());
-            respuesta.put("paciente", triageCreado.getCita().getPaciente().getNombre());
+            respuesta.put("paciente_id", triageCreado.getCita().getPacienteId());
             respuesta.put("enfermera", triageCreado.getEnfermera().getNombre());
             respuesta.put("imc_calculado", triageCreado.getImc());
             respuesta.put("categoria", triageCreado.getCategoria());

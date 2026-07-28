@@ -28,7 +28,8 @@ public class ConsultaController {
             respuesta.put("exito", true);
             respuesta.put("mensaje", "¡Consulta médica finalizada y receta emitida con éxito!");
             respuesta.put("consulta_id", consultaCreada.getId());
-            respuesta.put("paciente", consultaCreada.getCita().getPaciente().getNombre());
+
+            respuesta.put("paciente_id", consultaCreada.getCita().getPacienteId());
             respuesta.put("medico", consultaCreada.getMedico().getNombre());
             respuesta.put("diagnostico", consultaCreada.getDiagnostico());
             respuesta.put("receta", consultaCreada.getRecetaMedica());

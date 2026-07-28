@@ -63,8 +63,8 @@ public class CitaService {
         }
 
         Cita nuevaCita = new Cita();
-        nuevaCita.setMedico(medico);
-        nuevaCita.setPaciente(paciente);
+        nuevaCita.setMedicoId(medico.getId());
+        nuevaCita.setPacienteId(paciente.getId());
         nuevaCita.setFechaHora(dto.getFechaHora());
         nuevaCita.setMotivo(dto.getMotivo().trim());
         nuevaCita.setObservaciones(dto.getObservaciones() != null ? dto.getObservaciones().trim() : "");

@@ -18,7 +18,7 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
     List<Cita> findByMedicoIdOrderByFechaHoraDesc(Long medicoId);
     List<Cita> findAllByOrderByFechaHoraDesc();
     @Query("SELECT COUNT(c) > 0 FROM Cita c " +
-            "WHERE c.medico.id = :medicoId " +
+            "WHERE c.medicoId = :medicoId " +
             "AND c.estado != 'CANCELADA' " +
             "AND c.fechaHora BETWEEN :inicioVentana AND :finVentana")
     boolean existeChoqueHorarioMedico(
@@ -28,7 +28,7 @@ public interface CitaRepository extends JpaRepository<Cita, Long> {
     );
 
     @Query("SELECT COUNT(c) > 0 FROM Cita c " +
-            "WHERE c.paciente.id = :pacienteId " +
+            "WHERE c.pacienteId = :pacienteId " +
             "AND c.estado != 'CANCELADA' " +
             "AND c.fechaHora BETWEEN :inicio AND :fin")
     boolean existeChoqueHorarioPaciente(
