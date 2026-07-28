@@ -650,6 +650,8 @@ async function guardarTriageInline(citaId, nombrePaciente) {
     }
 }
 
+
+
 function verPestanaAdmin(idPestana, botonClickeado) {
     document.querySelectorAll(".admin-pestana").forEach(p => p.style.display = "none");
     document.querySelectorAll("#adminTabs .nav-link").forEach(b => b.classList.remove("active"));
@@ -657,24 +659,16 @@ function verPestanaAdmin(idPestana, botonClickeado) {
     document.getElementById(idPestana).style.display = "block";
     botonClickeado.classList.add("active");
 
+    // Ejecutamos la función de carga según la pestaña seleccionada:
     if (idPestana === "panel-citas") cargarTodasLasCitasAdmin();
     if (idPestana === "panel-directorio") cargarUsuariosAdmin();
     if (idPestana === "panel-sucursales") cargarSucursalesAdmin();
+
+    // ¡AQUÍ ESTÁ LA CORRECCIÓN! Ahora también carga las sucursales al entrar a Alta de Personal:
+    if (idPestana === "panel-crear-medico") cargarSucursalesAdmin();
 }
 
-// =========================================================================
-// GESTIÓN DE CITAS AGRUPADAS POR PACIENTE (ADMIN / CAJA)
-// =========================================================================
 
-// =========================================================================
-// CARGA DE CITAS BLINDADA Y RESISTENTE A FALLOS (app.js)
-// =========================================================================
-
-// =========================================================================
-// GESTIÓN DE CITAS AGRUPADAS POR PACIENTE (ADMIN / CAJA) - BLOQUE COMPLETO
-// =========================================================================
-
-// 1. FUNCIÓN PRINCIPAL: Conecta con Java y descarga datos
 async function cargarTodasLasCitasAdmin() {
     const contenedor = document.getElementById("contenedor-acordeon-citas");
     if (!contenedor) return;
@@ -716,7 +710,7 @@ async function cargarTodasLasCitasAdmin() {
     }
 }
 
-// 2. FUNCIÓN HERMANA: Dibuja el menú desplegable (Accordion) en el HTML
+
 function renderizarCitasAgrupadas(citas, mapaUsuarios) {
     const contenedor = document.getElementById("contenedor-acordeon-citas");
     if (!contenedor) return;
@@ -819,7 +813,7 @@ function renderizarCitasAgrupadas(citas, mapaUsuarios) {
     contenedor.innerHTML = htmlAcordeon;
 }
 
-// 3. FUNCIÓN HERMANA: Buscador en tiempo real
+
 function filtrarCitasAdmin() {
     const texto = document.getElementById("busqueda-citas-admin").value.trim().toLowerCase();
     const citas = window.citasAdminGlobales || [];
@@ -1163,6 +1157,7 @@ function logout() {
     cambiarVista("view-dpi");
 }
 
+
 function generarUsuarioAutomatico(idInputNombre, idInputDpi, idInputDestino) {
     const nombreVal = document.getElementById(idInputNombre).value.trim().toLowerCase();
     const dpiVal = document.getElementById(idInputDpi).value.trim();
@@ -1192,6 +1187,47 @@ function generarUsuarioAutomatico(idInputNombre, idInputDpi, idInputDestino) {
 
     campoDestino.value = usuarioCalculado;
 }
+async function cargarSucursalesAdmin() {
+    const tabla = document.getElementById("tabla-sucursales-listado");
+    const selectAlta = document.getElementById("reg-sucursal");
+
+    try {
+        const respuesta = await fetch(`${API_URL}/sucursales`);
+        if (!respuesta.ok) throw new Error("Error HTTP " + respuesta.status);
+        listaGlobalSucursalesAdmin = await respuesta.json();
+
+        // 1. Llenamos el menú desplegable de Alta de Personal
+        if (selectAlta) {
+            selectAlta.innerHTML = '<option value="">Seleccione una clínica / sucursal...</option>';
+            listaGlobalSucursalesAdmin.forEach(s => {
+                selectAlta.innerHTML += `<option value="${s.id}">${s.nombre} - ${s.direccion}</option>`;
+            });
+        }
+
+        // 2. Llenamos la tabla de la pestaña Sucursales
+        if (tabla) {
+            tabla.innerHTML = "";
+            listaGlobalSucursalesAdmin.forEach(s => {
+                const especialidadesBadge = (s.especialidades && s.especialidades.length > 0) ?
+                    s.especialidades.map(e => `<span class="badge bg-primary me-1">${e}</span>`).join("") :
+                    '<span class="text-muted small">Ninguna registrada</span>';
+
+                tabla.innerHTML += `
+                    <tr>
+                        <td><strong>#${s.id}</strong></td>
+                        <td class="font-weight-bold">${s.nombre}</td>
+                        <td>${s.direccion}</td>
+                        <td>${especialidadesBadge}</td>
+                    </tr>
+                `;
+            });
+        }
+    } catch (error) {
+        console.error("Error al cargar sucursales en admin:", error);
+        if (selectAlta) selectAlta.innerHTML = '<option value="">❌ Error al conectar con el servidor</option>';
+        if (tabla) tabla.innerHTML = `<tr><td colspan="4" class="text-danger text-center">Error al conectar con la base de datos</td></tr>`;
+    }
+}
 
 async function registrarAuditoria(accionRealizada, detalleCambio) {
     const usuarioEjecutor = miUsuarioActual ? miUsuarioActual.usuario : "SISTEMA / REGISTRO PÚBLICO";
@@ -1215,44 +1251,99 @@ async function registrarAuditoria(accionRealizada, detalleCambio) {
     }
 }
 
-// ==========================================
-// MÓDULO DE SUCURSALES Y CASCADAS (UNIFICADO)
-// ==========================================
+async function crearPersonalAdmin() {
+    const alertBox = document.getElementById("medico-alert");
+    if (alertBox) alertBox.style.display = "none";
 
-async function cargarSucursalesAdmin() {
-    const tabla = document.getElementById("tabla-sucursales-listado");
-    const selectAlta = document.getElementById("reg-sucursal");
+    // 1. Capturamos los datos del formulario
+    const rol = document.getElementById("emp-rol").value;
+    const sucursalVal = document.getElementById("reg-sucursal").value;
+    const nombre = document.getElementById("med-nombre").value.trim();
+    const dpi = document.getElementById("med-dpi").value.trim();
+    const usuario = document.getElementById("med-user").value.trim();
+    const password = document.getElementById("med-pass").value;
+    const email = document.getElementById("med-email").value.trim();
+    const telefono = document.getElementById("med-tel").value.trim();
+
+    // Valores por defecto si no es médico
+    const especialidad = (rol === "MEDIC") ? document.getElementById("med-esp").value : "General";
+    const precio = (rol === "MEDIC") ? parseFloat(document.getElementById("med-precio").value || 0) : 0.00;
+
+    // Validaciones
+    if (!sucursalVal) {
+        mostrarAlertaPersonal("⚠️ Por favor seleccione una clínica / sucursal para continuar.", "warning");
+        return;
+    }
+    if (dpi.length !== 13) {
+        mostrarAlertaPersonal("⚠️ El DPI / CUI debe contener exactamente 13 dígitos numéricos.", "warning");
+        return;
+    }
+
+    const idSucursalNum = parseInt(sucursalVal, 10);
+
+    // 2. EL PAQUETE PERFECTO: Formateamos como objetos JPA { nombre: ... } y { id: ... }
+    const nuevoEmpleado = {
+        nombre: nombre,
+        dpi: dpi,
+        cui: dpi,
+        usuario: usuario,
+        username: usuario,
+        password: password,
+        pass: password,
+        contrasena: password,
+        email: email,
+        correo: email,
+        telefono: telefono || "00000000",
+        nit: "CF",
+
+        // Formato requerido por Spring Boot para relaciones de entidades:
+        role: { nombre: rol },
+        rol: { nombre: rol },
+
+        sucursal: idSucursalNum ? { id: idSucursalNum } : null,
+        sucursalId: idSucursalNum,
+
+        especialidad: especialidad,
+        precio: precio,
+        precioConsulta: precio,
+        estado: "ACTIVO",
+        cuentaBloqueada: false
+    };
+
+    console.log("📤 Enviando empleado con estructura JPA al servidor:", nuevoEmpleado);
 
     try {
-        const respuesta = await fetch(`${API_URL}/sucursales`);
-        listaGlobalSucursalesAdmin = await respuesta.json();
+        // Mantenemos la ruta /users/register que demostró conectar correctamente
+        const respuesta = await fetch(`${API_URL}/users/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(nuevoEmpleado)
+        });
 
-        if (selectAlta) {
-            selectAlta.innerHTML = '<option value="">Seleccione una sucursal física...</option>';
-            listaGlobalSucursalesAdmin.forEach(s => {
-                selectAlta.innerHTML += `<option value="${s.id}">${s.nombre} - ${s.direccion}</option>`;
-            });
-        }
+        const datos = await respuesta.json();
 
-        if (tabla) {
-            tabla.innerHTML = "";
-            listaGlobalSucursalesAdmin.forEach(s => {
-                const especialidadesBadge = (s.especialidades && s.especialidades.length > 0) ?
-                    s.especialidades.map(e => `<span class="badge bg-primary me-1">${e}</span>`).join("") :
-                    '<span class="text-muted small">Ninguna registrada</span>';
+        if (respuesta.ok || datos.exito || datos.id) {
+            mostrarAlertaPersonal(`✅ ¡${nombre} ha sido registrado(a) exitosamente en el hospital!`, "success");
+            document.getElementById("form-alta-personal").reset();
 
-                tabla.innerHTML += `
-                    <tr>
-                        <td><strong>#${s.id}</strong></td>
-                        <td class="font-weight-bold">${s.nombre}</td>
-                        <td>${s.direccion}</td>
-                        <td>${especialidadesBadge}</td>
-                    </tr>
-                `;
-            });
+            if (typeof cargarUsuariosAdmin === "function") cargarUsuariosAdmin();
+        } else {
+            mostrarAlertaPersonal("❌ Rechazo de Java: " + (datos.error || datos.mensaje || JSON.stringify(datos)), "danger");
         }
     } catch (error) {
-        if (tabla) tabla.innerHTML = `<tr><td colspan="4" class="text-danger text-center">Error al conectar</td></tr>`;
+        console.error("❌ Error de red:", error);
+        mostrarAlertaPersonal("❌ Error de red: No se pudo conectar con el endpoint.", "danger");
+    }
+}
+
+function mostrarAlertaPersonal(mensaje, tipo) {
+    const alertBox = document.getElementById("medico-alert");
+    if (alertBox) {
+        alertBox.className = `alert alert-${tipo} text-center fw-bold mt-3`;
+        alertBox.innerText = mensaje;
+        alertBox.style.display = "block";
+    } else {
+        alert(mensaje);
     }
 }
 
@@ -1470,7 +1561,7 @@ async function cargarMedicosCascada() {
     }
 }
 
-// AUTOMATIZACIÓN DE ASIGNACIÓN AL CAMBIAR FECHA Y HORA
+
 document.addEventListener("DOMContentLoaded", function() {
     const inputFechaHora = document.getElementById("cita-fecha");
 
@@ -1793,3 +1884,4 @@ function desbloquearUsuario(id, nombre) {
         // Aquí puedes disparar tu modal de Bootstrap: new bootstrap.Modal(document.getElementById('modalReasignar')).show();
     }
 }
+
