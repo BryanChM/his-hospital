@@ -91,7 +91,7 @@ public class CitaService {
         Cita citaGuardada = citaRepository.save(nuevaCita);
 
         String fechaLimpia = dto.getFechaHora().toString().replace("T", " a las ") + " hrs";
-        String asuntoCita = " Confirmación de Cita Médica - Hospital HIS";
+        String asuntoCita = " Confirmación de Cita Médica - Hospital";
         String cuerpoCita = "Hola " + paciente.getNombre() + ",\n\n" +
                 "Te confirmamos que tu cita médica ha sido programada y registrada en nuestro sistema clínico.\n\n" +
                 " DETALLES DE TU CONSULTA:\n" +
@@ -103,7 +103,7 @@ public class CitaService {
                 "--------------------------------------------------\n\n" +
                 " RECOMENDACIÓN:\n" +
                 "Por favor preséntate en la recepción de la clínica 15 minutos antes de tu horario programado con tu DPI en mano para la toma de signos vitales (Triage).\n\n" +
-                "¡Esperamos verte pronto!\nPortal Clínico Hospital HIS";
+                "¡Esperamos verte pronto!\nPortal Clínico Hospital";
 
         emailService.enviarCorreo(paciente.getEmail(), asuntoCita, cuerpoCita);
 

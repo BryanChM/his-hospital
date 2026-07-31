@@ -16,12 +16,12 @@ public class EmailService {
     @Async
     public void enviarCorreo(String destinatario, String asunto, String cuerpo) {
         if (mailSender == null || destinatario == null || destinatario.trim().isEmpty()) {
-            System.out.println("⚠️ No hay configuración de correo o el destinatario está vacío.");
+            System.out.println(" No hay configuración de correo o el destinatario está vacío.");
             return;
         }
         try {
             SimpleMailMessage mensaje = new SimpleMailMessage();
-            mensaje.setFrom("hospital.his.notificaciones@gmail.com"); // Puedes poner el mismo de properties
+            mensaje.setFrom("hospital.his.notificaciones@gmail.com"); 
             mensaje.setTo(destinatario);
             mensaje.setSubject(asunto);
             mensaje.setText(cuerpo);

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HIS Hospital System - Portal Integrado</title>
+    <title>Hospital System - Portal Integrado</title>
     <!-- Bootstrap 5 CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -23,7 +23,7 @@
 <!-- Barra de Navegación -->
 <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-4 shadow-sm">
     <div class="container">
-        <a class="navbar-brand font-weight-bold" href="#">HIS Hospital System</a>
+        <a class="navbar-brand font-weight-bold" href="#"> Hospital System</a>
         <div id="nav-actions" style="display: none;">
             <span id="user-display" class="text-white me-3 font-weight-bold"></span>
             <button onclick="logout()" class="btn btn-outline-light btn-sm">Cerrar Sesión</button>
@@ -48,7 +48,7 @@
                             <input type="text" id="input-dpi-check" class="form-control form-control-lg text-center font-monospace" placeholder="2845123450101" maxlength="13" required>
                             <div class="form-text">Debe contener exactamente 13 dígitos numéricos.</div>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-lg w-100 font-weight-bold">Consultar en el HIS</button>
+                        <button type="submit" class="btn btn-primary btn-lg w-100 font-weight-bold">Consultar</button>
                     </form>
                 </div>
             </div>
@@ -229,32 +229,32 @@
     <!-- PORTAL 5: DASHBOARD DE ADMISIÓN Y RECEPCIÓN (CORREGIDO) -->
     <div id="panel-admision" class="section-view">
         <div class="alert alert-warning d-flex justify-content-between align-items-center mb-4 shadow-sm">
-            <span><strong>Estación de Recepción y Admisión:</strong> Verificación de citas, control de sala de espera y registro de llegadas (CU-05).</span>
+            <span><strong>Estación de Recepción y Admisión:</strong> Verificación de citas, control de sala de espera y registro de llegadas.</span>
             <span class="badge bg-warning text-dark fs-6 font-weight-bold">RECEPCIÓN / ADMISIÓN</span>
         </div>
 
-        <div class="card border-warning shadow-sm mb-4">
-            <div class="card-header bg-warning text-dark font-weight-bold">
-                🏥 Búsqueda y Verificación de Citas
-            </div>
-            <div class="card-body p-4">
-                <label class="form-label fw-bold">Tipo de Búsqueda:</label>
-                <div class="btn-group w-100 mb-3" role="group">
-                    <input type="radio" class="btn-check" name="tipoBusqueda" id="btnPorDpi" value="POR_DPI" checked>
-                    <label class="btn btn-outline-dark" for="btnPorDpi">🔍 Por DPI</label>
+        <!-- <div class="card border-warning shadow-sm mb-4">
+                 <div class="card-header bg-warning text-dark font-weight-bold">
+                      Búsqueda y Verificación de Citas
+                 </div>
+                 <div class="card-body p-4">
+                     <label class="form-label fw-bold">Tipo de Búsqueda:</label>
+                     <div class="btn-group w-100 mb-3" role="group">
+                         <input type="radio" class="btn-check" name="tipoBusqueda" id="btnPorDpi" value="POR_DPI" checked>
+                         <label class="btn btn-outline-dark" for="btnPorDpi">Por DPI</label>
 
-                    <input type="radio" class="btn-check" name="tipoBusqueda" id="btnPorCita" value="POR_CITA">
-                    <label class="btn btn-outline-dark" for="btnPorCita">🎫 Por No. Cita</label>
-                </div>
+                         <input type="radio" class="btn-check" name="tipoBusqueda" id="btnPorCita" value="POR_CITA">
+                         <label class="btn btn-outline-dark" for="btnPorCita">🎫 Por No. Cita</label>
+                     </div>
 
-                <div class="input-group">
-                    <input type="text" id="inputCriterio" class="form-control form-control-lg" placeholder="Ingrese el DPI o Número de Cita del paciente...">
-                    <button class="btn btn-dark px-4 fw-bold" onclick="ejecutarBusquedaRecepcion()">Buscar en Recepción</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Contenedor dinámico de resultados (Aquí se dibujan los FA03, FA04 y tarjetas de cita) -->
+                     <div class="input-group">
+                         <input type="text" id="inputCriterio" class="form-control form-control-lg" placeholder="Ingrese el DPI o Número de Cita del paciente...">
+                         <button class="btn btn-dark px-4 fw-bold" onclick="ejecutarBusquedaRecepcion()">Buscar en Recepción</button>
+                     </div>
+                 </div>
+             </div>
+-->
+             <!-- Contenedor dinámico de resultados (Aquí se dibujan los FA03, FA04 y tarjetas de cita) -->
         <div id="contenedor-resultados-recepcion"></div>
     </div>
 

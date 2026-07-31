@@ -13,9 +13,7 @@ let elementosPorPaginaUsuarios = 10;
 let listaSucursales = [];
 let listaGlobalSucursalesAdmin = [];
 
-// =========================================================================
-// FUNCIONES AUXILIARES
-// =========================================================================
+
 function obtenerIdSucursal(entidad) {
     if (!entidad) return null;
     if (entidad.sucursal && entidad.sucursal.id) return String(entidad.sucursal.id);
@@ -40,9 +38,7 @@ function cambiarVista(idVista) {
     if (vista) vista.style.display = "block";
 }
 
-// =========================================================================
-// LOGIN Y REGISTRO
-// =========================================================================
+
 async function verificarDpi() {
     const dpiInput = document.getElementById("input-dpi-check").value.trim();
     const alertBox = document.getElementById("dpi-alert");
@@ -193,7 +189,7 @@ async function procesarRegistro(event) {
 
             const datosExpediente = {
                 pacienteId: idGenerado,
-                tipoSangre: "Pendiente de Triage",
+                tipoSangre: "Pendiente",
                 alergias: "Ninguna registrada",
                 antecedentesMedicos: "Especialidad solicitada: " + especialidadVal,
                 contactoEmergencia: "Telefono propio: " + telefono
@@ -258,9 +254,7 @@ function generarUsuarioAutomatico(idInputNombre, idInputDpi, idInputDestino) {
     campoDestino.value = usuarioCalculado;
 }
 
-// =========================================================================
-// MODULO PACIENTE
-// =========================================================================
+
 async function cargarCitasDePacienteLogueado(username) {
     miUsername = username;
     const contenedor = document.getElementById("lista-citas-paciente");
@@ -542,11 +536,8 @@ async function agendarCitaPaciente(event) {
 }
 
 
-// =========================================================================
-// RECEPCION Y ADMISION (DASHBOARD AUTOMATICO CON DIAGNOSTICO)
-// =========================================================================
 
-// Esta funcion evita que el boton del HTML cause un error si le das clic
+
 function ejecutarBusquedaRecepcion() {
     cargarCitasRecepcion();
 }
@@ -555,7 +546,7 @@ async function cargarCitasRecepcion() {
     const contenedor = document.getElementById('contenedor-resultados-recepcion');
     if (!contenedor) return;
 
-    contenedor.innerHTML = `<div class="text-center my-4"><div class="spinner-border text-primary" role="status"></div><p>Sincronizando con la base de datos...</p></div>`;
+    contenedor.innerHTML = `<div class="text-center my-4"><div class="spinner-border text-primary" role="status"></div><p>Cargando pacientes programados para su sucursal...</p></div>`;
 
     try {
         const [respCitas, respUsers] = await Promise.all([
@@ -575,47 +566,29 @@ async function cargarCitasRecepcion() {
         const sucRecepcionId = obtenerIdSucursal(datosRecepcionista);
 
         if (!sucRecepcionId) {
-            contenedor.innerHTML = `<div class="alert alert-danger text-center fw-bold">Atencion: Su usuario de Recepcion no tiene una sucursal asignada en el sistema.</div>`;
+            contenedor.innerHTML = `<div class="alert alert-danger text-center fw-bold">Atención: Su usuario de Recepción no tiene una sucursal asignada en el sistema.</div>`;
             return;
         }
 
-        // 1. Buscamos TODAS las citas pendientes en todo el hospital
         const todasPendientes = citas.filter(c => c.estado === "PROGRAMADA" || c.estado === "AGENDADA");
-
-        // 2. Filtramos solo las que son de nuestra sucursal
         const citasRecepcion = todasPendientes.filter(c => {
             const sucCitaId = obtenerIdSucursal(c);
             if (!sucCitaId) return false;
             return (sucCitaId === sucRecepcionId);
         });
 
-        // 3. MODO DIAGNOSTICO: Si no hay citas para Shinobu, investigamos por que
+        // MENSAJE LIMPIO (SIN DIAGNÓSTICO)
         if (citasRecepcion.length === 0) {
-            if (todasPendientes.length > 0) {
-                // Hay citas, pero son de otras sedes o son nulas
-                const infoExtra = todasPendientes.map(c => `Cita #${c.id} (Sede: ${obtenerIdSucursal(c) || 'NULA'})`).join(" | ");
-                contenedor.innerHTML = `
-                    <div class="alert alert-warning text-center p-4 shadow-sm">
-                        <h5 class="fw-bold">Filtro de Seguridad Activo</h5>
-                        <p class="mb-1">Tu usuario esta asignado a la sucursal <b>#${sucRecepcionId}</b>.</p>
-                        <p class="mb-1">El sistema SÍ detecto citas nuevas en la base de datos, pero pertenecen a:</p>
-                        <p class="font-monospace text-danger border p-2 bg-white mt-2">${infoExtra}</p>
-                        <small class="text-muted d-block mt-2">Si el numero es distinto al tuyo, el paciente agendo en otra clinica. Si dice NULA, Java no esta guardando el dato.</small>
-                    </div>`;
-            } else {
-                // Realmente no hay ninguna cita en todo el hospital
-                contenedor.innerHTML = `<div class="alert alert-info text-center p-4 shadow-sm"><h5 class="fw-bold">No hay ninguna cita medica pendiente en todo el hospital.</h5></div>`;
-            }
+            contenedor.innerHTML = `<div class="alert alert-info text-center p-4 shadow-sm"><h5 class="fw-bold">No hay citas médicas pendientes de llegada en su sucursal.</h5><p class="mb-0 small">Los pacientes agendados aparecerán aquí automáticamente.</p></div>`;
             return;
         }
 
-        // DIBUJAMOS LAS CITAS CORRECTAS
         contenedor.innerHTML = "";
         citasRecepcion.forEach(cita => {
             const pacId = String(cita.pacienteId || (cita.paciente ? cita.paciente.id : ""));
             const pacObj = mapaUsers[pacId] || cita.paciente || { nombre: cita.nombrePaciente || 'Paciente', dpi: 'N/A' };
             const esEmergencia = cita.motivo && cita.motivo.includes("EMERGENCIA");
-            const accionBoton = `<button onclick="confirmarLlegadaRecepcion(${cita.id})" class="btn btn-success btn-lg fw-bold w-100 shadow-sm mt-3">Confirmar Llegada (Pasar a Enfermeria)</button>`;
+            const accionBoton = `<button onclick="confirmarLlegadaRecepcion(${cita.id})" class="btn btn-success btn-lg fw-bold w-100 shadow-sm mt-3">Confirmar Llegada (Pasar a Enfermería)</button>`;
 
             contenedor.innerHTML += `
                 <div class="card shadow-sm mb-3 border-0 ${esEmergencia ? 'border-start border-danger border-5' : 'border-start border-primary border-5'}">
@@ -670,9 +643,7 @@ async function confirmarLlegadaRecepcion(citaId) {
     }
 }
 
-// =========================================================================
-// MODULO DE ENFERMERIA (TRIAGE CON DIAGNOSTICO AUTOMATICO)
-// =========================================================================
+
 async function cargarTriageEnfermeria() {
     const tabla = document.getElementById("tabla-enfermeria");
     if (!tabla) return;
@@ -701,40 +672,21 @@ async function cargarTriageEnfermeria() {
             return;
         }
 
-        // 1. Estados válidos para Triage: Pacientes que ya confirmaron llegada en Recepción o están agendados
         const estadosPendientes = ["EN_ESPERA_TRIAGE", "CONFIRMADA", "PROGRAMADA", "AGENDADA"];
         const todasPendientes = citas.filter(c => estadosPendientes.includes(c.estado));
 
-        // 2. Filtrado estricto por la sucursal asignada a la enfermera
         const pendientesSucursal = todasPendientes.filter(c => {
             const sucCitaId = obtenerIdSucursal(c);
             if (!sucCitaId) return false;
             return (sucCitaId === sucEnfermeraId);
         });
 
-        // 3. MODO DIAGNÓSTICO: Si la tabla queda vacía, explicamos el motivo
+        // MENSAJE LIMPIO (SIN DIAGNÓSTICO)
         if (pendientesSucursal.length === 0) {
-            if (todasPendientes.length > 0) {
-                const detalleCitas = todasPendientes.map(c => `Cita #${c.id} (Sede: ${obtenerIdSucursal(c) || 'NULA'})`).join(" | ");
-                tabla.innerHTML = `
-                    <tr>
-                        <td colspan="7" class="p-4">
-                            <div class="alert alert-warning text-center m-0 shadow-sm">
-                                <h6 class="fw-bold">Filtro de Seguridad de Enfermería Activo</h6>
-                                <p class="mb-1 small">Tu usuario está asignado a la sucursal <b>#${sucEnfermeraId}</b>.</p>
-                                <p class="mb-1 small">Hay pacientes pendientes en el sistema, pero pertenecen a:</p>
-                                <div class="font-monospace text-danger border p-2 bg-white rounded my-2 small">${detalleCitas}</div>
-                                <small class="text-muted">Pide en Recepción que confirme la llegada de la cita recién creada para que aparezca aquí.</small>
-                            </div>
-                        </td>
-                    </tr>`;
-            } else {
-                tabla.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted font-weight-bold">No hay pacientes pendientes de toma de signos vitales en su sucursal en este momento.</td></tr>`;
-            }
+            tabla.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted font-weight-bold">No hay pacientes pendientes de toma de signos vitales en su sucursal en este momento.</td></tr>`;
             return;
         }
 
-        // DIBUJAR TABLA DE PACIENTES
         tabla.innerHTML = "";
         pendientesSucursal.forEach(c => {
             const pacId = String(c.pacienteId || (c.paciente ? c.paciente.id : ""));
