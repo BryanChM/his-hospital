@@ -160,6 +160,7 @@
                     <div class="card-header bg-primary text-white font-weight-bold">Agendar Nueva Cita Médica (CU-03)</div>
                     <div class="card-body p-4">
                         <div id="cita-alert" class="alert" style="display: none;"></div>
+                        <!-- FORMULARIO DE AGENDAMIENTO CON EMERGENCIA -->
                         <form id="form-agendar-cita" onsubmit="event.preventDefault(); agendarCitaPaciente();">
                             <div class="row g-3 mb-3">
                                 <div class="col-md-12">
@@ -191,11 +192,20 @@
                                 <label class="form-label font-weight-bold">Motivo de la Consulta</label>
                                 <input type="text" id="cita-motivo" class="form-control" placeholder="Ej: Dolor de cabeza persistente" required>
                             </div>
-                            <div class="mb-4">
+                            <div class="mb-3">
                                 <label class="form-label font-weight-bold">Observaciones adicionales (Opcional)</label>
                                 <textarea id="cita-observaciones" class="form-control" rows="2" placeholder="Ej: Síntomas desde hace 3 días..."></textarea>
                             </div>
-                            <button type="submit" class="btn btn-primary w-100 py-2 font-weight-bold">Programar Cita</button>
+
+                            <!-- ¡AQUÍ ESTÁ LA CASILLA DE EMERGENCIA! -->
+                            <div class="form-check mb-4 p-3 bg-light border border-danger border-2 rounded shadow-sm">
+                                <input class="form-check-input ms-1" type="checkbox" id="cita-emergencia" value="true" style="transform: scale(1.3);">
+                                <label class="form-check-label fw-bold text-danger ms-2" for="cita-emergencia">
+                                    🚨 ¿Es una Emergencia Médica? (Atención prioritaria inmediata)
+                                </label>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary w-100 py-2 font-weight-bold fs-5 shadow">Programar Cita</button>
                         </form>
                     </div>
                 </div>

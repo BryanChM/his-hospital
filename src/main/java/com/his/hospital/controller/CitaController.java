@@ -17,6 +17,24 @@ import java.util.Map;
 @CrossOrigin(origins = "*")
 public class CitaController {
 
+
+    @PutMapping("/llegada/{id}")
+    public ResponseEntity<?> registrarLlegadaRecepcion(@PathVariable Long id) {
+        Map<String, Object> respuesta = new HashMap<>();
+        try {
+            Cita citaActualizada = citaService.registrarLlegada(id);
+
+            respuesta.put("exito", true);
+            respuesta.put("mensaje", "Llegada confirmada. El paciente pasó a la cola de Enfermería (Triage).");
+            respuesta.put("estado_actual", citaActualizada.getEstado());
+            return ResponseEntity.ok(respuesta);
+        } catch (Exception e) {
+            respuesta.put("exito", false);
+            respuesta.put("error", "No se pudo registrar la llegada: " + e.getMessage());
+            return ResponseEntity.badRequest().body(respuesta);
+        }
+    }
+
     @Autowired
     private CitaService citaService;
 

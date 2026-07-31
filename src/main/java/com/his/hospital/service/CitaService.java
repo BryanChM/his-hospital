@@ -14,6 +14,7 @@ import java.util.List;
 
 @Service
 public class CitaService {
+
     @Autowired
     private EmailService emailService;
     @Autowired
@@ -30,11 +31,17 @@ public class CitaService {
         Long idPacienteFinal = (dto.getPacienteId() != null) ? dto.getPacienteId() :
                 (dto.getPaciente() != null && dto.getPaciente().getId() != null) ? dto.getPaciente().getId() : null;
 
+        Long idSucursalFinal = (dto.getSucursalId() != null) ? dto.getSucursalId() :
+                (dto.getSucursal() != null && dto.getSucursal().getId() != null) ? dto.getSucursal().getId() : null;
+
         if (idMedicoFinal == null) {
             throw new RuntimeException("Error: El ID del médico llegó vacío desde el formulario web.");
         }
         if (idPacienteFinal == null) {
             throw new RuntimeException("Error: El ID del paciente llegó vacío desde el formulario web.");
+        }
+        if (idSucursalFinal == null) {
+            throw new RuntimeException("Error: El ID de la sucursal llegó vacío desde el formulario web.");
         }
         if (dto.getFechaHora() == null) {
             throw new RuntimeException("Error: La fecha y hora de la consulta es obligatoria.");
@@ -65,6 +72,17 @@ public class CitaService {
         Cita nuevaCita = new Cita();
         nuevaCita.setMedicoId(medico.getId());
         nuevaCita.setPacienteId(paciente.getId());
+
+        // CORRECCIÓN 1: Creamos un objeto Sucursal solo con el ID para satisfacer a Cita.java
+        com.his.hospital.entity.Sucursal sucursalAsignada = new com.his.hospital.entity.Sucursal();
+        sucursalAsignada.setId(idSucursalFinal);
+        nuevaCita.setSucursal(sucursalAsignada);
+
+        nuevaCita.setEspecialidad(dto.getEspecialidad());
+
+        // CORRECCIÓN 2: Asignamos "NORMAL" directamente porque el DTO no tiene ese campo
+        nuevaCita.setPrioridad("NORMAL");
+
         nuevaCita.setFechaHora(dto.getFechaHora());
         nuevaCita.setMotivo(dto.getMotivo().trim());
         nuevaCita.setObservaciones(dto.getObservaciones() != null ? dto.getObservaciones().trim() : "");
@@ -134,6 +152,15 @@ public class CitaService {
         cita.setObservaciones(triageAnterior + "Receta: " + receta);
         cita.setEstado("ATENDIDA");
 
+        return citaRepository.save(cita);
+    }
+
+    // Método para registrar la llegada del paciente en Recepción
+    public Cita registrarLlegada(Long id) {
+        Cita cita = citaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("No se encontró ninguna cita con el ID: " + id));
+
+        cita.setEstado("EN_ESPERA_TRIAGE");
         return citaRepository.save(cita);
     }
 }

@@ -8,6 +8,10 @@ import java.time.LocalDateTime;
 @Table(name = "citas")
 @Data
 public class Cita {
+    @ManyToOne
+    @JoinColumn(name = "sucursal_id")
+    private Sucursal sucursal;
+
     @Column(name = "observaciones", length = 500)
     private String observaciones;
 
@@ -15,11 +19,9 @@ public class Cita {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Relación directa de ID a ID para el paciente (evita errores de símbolos y uniones complejas)
     @Column(name = "paciente_id", nullable = false)
     private Long pacienteId;
 
-    // Relación directa de ID a ID para el médico asignado
     @Column(name = "medico_id", nullable = false)
     private Long medicoId;
 
@@ -40,7 +42,4 @@ public class Cita {
 
     @Column(name = "especialidad", length = 100)
     private String especialidad;
-
-    @Column(name = "sucursal", length = 100)
-    private String sucursal;
 }
