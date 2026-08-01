@@ -7,15 +7,59 @@
     <!-- Bootstrap 5 CSS CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background-color: #f0f4f8; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .navbar-custom { background-color: #0056b3; }
-        .card { border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.08); margin-bottom: 20px; }
-        .card-header { font-weight: bold; }
+        /* =========================================
+           TEMA GENERAL Y NAVEGACIÓN
+           ========================================= */
+        body {
+            background-color: #f0fdf4; /* Fondo verde agua muy suave */
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar-custom { background-color: #3b82f6; border-bottom: 4px solid #2563eb; } /* Azul amigable con borde 3D */
+        .card { border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 2px solid #e2e8f0; }
+        .card-header { font-weight: bold; border-radius: 20px 20px 0 0 !important; border-bottom: 2px solid #e2e8f0; }
         .section-view { display: none; }
         #view-dpi { display: block; }
         .admin-pestana { display: none; }
         #panel-citas { display: block; }
         .table th { vertical-align: middle; }
+
+        /* =========================================
+           OPCIÓN 23: PEDIÁTRICO / GAMIFICADO
+           ========================================= */
+        .grid-peds {
+            display: flex; flex-wrap: wrap; gap: 25px; justify-content: flex-start; padding: 10px;
+        }
+        .card-peds {
+            background: #ffffff; width: 320px; padding: 25px;
+            border-radius: 30px; border: 3px solid #e2e8f0;
+            box-shadow: 0 10px 0 #cbd5e1; /* Sombra sólida 3D */
+            color: #334155; text-align: center; margin-bottom: 15px;
+            position: relative;
+        }
+        /* Estilos especiales si es emergencia */
+        .card-peds.emergencia {
+            border-color: #fca5a5; box-shadow: 0 10px 0 #f87171; background: #fff5f5;
+        }
+        .peds-avatar {
+            width: 70px; height: 70px; background: #fbbf24; border-radius: 35px;
+            margin: 0 auto 15px auto; display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; font-weight: 900; color: #fff;
+            border: 3px solid #fff; box-shadow: 0 4px 0 #d97706;
+        }
+        .card-peds.emergencia .peds-avatar {
+            background: #ef4444; box-shadow: 0 4px 0 #b91c1c;
+        }
+        .btn-peds {
+            background: #3b82f6; color: white; border: none; border-radius: 20px;
+            padding: 15px; width: 100%; font-weight: 900; font-size: 1.1rem;
+            box-shadow: 0 6px 0 #1d4ed8; margin-top: 15px; transition: 0.1s; cursor: pointer;
+        }
+        .btn-peds:active { transform: translateY(6px); box-shadow: 0 0 0 #1d4ed8; }
+
+        .btn-peds.emergencia-btn {
+            background: #ef4444; box-shadow: 0 6px 0 #b91c1c;
+        }
+        .btn-peds.emergencia-btn:active { transform: translateY(6px); box-shadow: 0 0 0 #b91c1c; }
     </style>
 </head>
 <body>
@@ -23,10 +67,10 @@
 <!-- Barra de Navegación -->
 <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-4 shadow-sm">
     <div class="container">
-        <a class="navbar-brand font-weight-bold" href="#"> Hospital System</a>
+        <a class="navbar-brand font-weight-bold fs-4" href="#">🏥 Hospital System</a>
         <div id="nav-actions" style="display: none;">
             <span id="user-display" class="text-white me-3 font-weight-bold"></span>
-            <button onclick="logout()" class="btn btn-outline-light btn-sm">Cerrar Sesión</button>
+            <button onclick="logout()" class="btn btn-light btn-sm fw-bold" style="border-radius: 10px;">Cerrar Sesión</button>
         </div>
     </div>
 </nav>
@@ -36,7 +80,7 @@
     <!-- VISTA DE ACCESO 1: VALIDACIÓN DE DPI / CUI -->
     <div id="view-dpi" class="section-view row justify-content-center">
         <div class="col-md-5">
-            <div class="card mt-5 border-0">
+            <div class="card mt-5 border-0 shadow">
                 <div class="card-header bg-dark text-white text-center py-3">
                     <h4 class="mb-0">Verificación de DPI / CUI</h4>
                 </div>
@@ -45,10 +89,10 @@
                     <div id="dpi-alert" class="alert alert-warning" style="display: none;"></div>
                     <form onsubmit="event.preventDefault(); verificarDpi();">
                         <div class="mb-4">
-                            <input type="text" id="input-dpi-check" class="form-control form-control-lg text-center font-monospace" placeholder="2845123450101" maxlength="13" required>
+                            <input type="text" id="input-dpi-check" class="form-control form-control-lg text-center font-monospace" placeholder="2845123450101" maxlength="13" required style="border-radius: 15px;">
                             <div class="form-text">Debe contener exactamente 13 dígitos numéricos.</div>
                         </div>
-                        <button type="submit" class="btn btn-primary btn-lg w-100 font-weight-bold">Consultar</button>
+                        <button type="submit" class="btn btn-primary btn-lg w-100 font-weight-bold" style="border-radius: 15px; box-shadow: 0 4px 0 #0d6efd;">Consultar</button>
                     </form>
                 </div>
             </div>
@@ -58,25 +102,25 @@
     <!-- VISTA DE ACCESO 2: LOGIN CON CREDENCIALES -->
     <div id="view-login" class="section-view row justify-content-center">
         <div class="col-md-5">
-            <div class="card mt-4 border-0">
+            <div class="card mt-4 border-0 shadow">
                 <div class="card-header bg-primary text-white text-center py-3">
                     <h4 class="mb-0">Ingreso al Sistema</h4>
                 </div>
                 <div class="card-body p-4">
-                    <div class="alert alert-info py-2 text-center mb-3">
+                    <div class="alert alert-info py-2 text-center mb-3" style="border-radius: 10px;">
                         <small>Usuario detectado: <strong id="login-nombre-user"></strong><br>Rol registrado: <span id="login-rol-badge" class="badge bg-dark"></span></small>
                     </div>
                     <div id="login-alert" class="alert alert-danger" style="display: none;"></div>
                     <form onsubmit="event.preventDefault(); procesarLogin();">
                         <div class="mb-3">
                             <label class="form-label font-weight-bold">Nombre de Usuario</label>
-                            <input type="text" id="login-username" class="form-control" required>
+                            <input type="text" id="login-username" class="form-control" required style="border-radius: 10px;">
                         </div>
                         <div class="mb-4">
                             <label class="form-label font-weight-bold">Contraseña</label>
-                            <input type="password" id="login-password" class="form-control" required>
+                            <input type="password" id="login-password" class="form-control" required style="border-radius: 10px;">
                         </div>
-                        <button type="submit" class="btn btn-primary w-100 py-2 font-weight-bold">Iniciar Sesión</button>
+                        <button type="submit" class="btn btn-primary w-100 py-2 font-weight-bold" style="border-radius: 15px; box-shadow: 0 4px 0 #0d6efd;">Iniciar Sesión</button>
                         <button type="button" onclick="logout()" class="btn btn-link w-100 mt-2 text-muted btn-sm">← Regresar y probar con otro DPI</button>
                     </form>
                 </div>
@@ -87,12 +131,12 @@
     <!-- VISTA DE ACCESO 3: REGISTRO DE EXPEDIENTE -->
     <div id="view-reg" class="section-view row justify-content-center">
         <div class="col-md-7">
-            <div class="card mt-3 border-0">
+            <div class="card mt-3 border-0 shadow">
                 <div class="card-header bg-success text-white text-center py-3">
                     <h4 class="mb-0">Crear Expediente / Nuevo Registro</h4>
                 </div>
                 <div class="card-body p-4">
-                    <div class="alert alert-warning py-2 mb-3 text-center">
+                    <div class="alert alert-warning py-2 mb-3 text-center" style="border-radius: 10px;">
                         <small>El DPI ingresado no se encuentra. Por favor complete su registro para crear su expediente.</small>
                     </div>
                     <div id="reg-alert" class="alert" style="display: none;"></div>
@@ -100,17 +144,17 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label font-weight-bold">Número de DPI / CUI</label>
-                                <input type="text" id="reg-dpi" class="form-control bg-light font-monospace font-weight-bold" readonly required>
+                                <input type="text" id="reg-dpi" class="form-control bg-light font-monospace font-weight-bold" readonly required style="border-radius: 10px;">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label font-weight-bold">Nombre Completo</label>
                                 <input type="text" id="reg-nombre" class="form-control" placeholder="Ej: Juan Pérez"
-                                       oninput="generarUsuarioAutomatico('reg-nombre', 'reg-dpi', 'reg-username')" required>
+                                       oninput="generarUsuarioAutomatico('reg-nombre', 'reg-dpi', 'reg-username')" required style="border-radius: 10px;">
                             </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label font-weight-bold text-success">¿Qué especialidad médica requiere consultar?</label>
-                            <select id="reg-esp" class="form-select border-success font-weight-bold" required>
+                            <select id="reg-esp" class="form-select border-success font-weight-bold" required style="border-radius: 10px;">
                                 <option value="Medicina General">Medicina General (Evaluación básica)</option>
                                 <option value="Cardiología">Cardiología</option>
                                 <option value="Pediatría">Pediatría</option>
@@ -123,24 +167,24 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label font-weight-bold">Nombre de Usuario (Asignado por el HIS)</label>
-                                <input type="text" id="reg-username" class="form-control bg-light font-monospace text-primary font-weight-bold" readonly required>
+                                <input type="text" id="reg-username" class="form-control bg-light font-monospace text-primary font-weight-bold" readonly required style="border-radius: 10px;">
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label font-weight-bold">Contraseña</label>
-                                <input type="password" id="reg-password" class="form-control" required>
+                                <input type="password" id="reg-password" class="form-control" required style="border-radius: 10px;">
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label font-weight-bold">Correo Electrónico</label>
-                                <input type="email" id="reg-email" class="form-control" required>
+                                <input type="email" id="reg-email" class="form-control" required style="border-radius: 10px;">
                             </div>
                             <div class="col-md-6 mb-4">
                                 <label class="form-label font-weight-bold">Teléfono (Exactamente 8 dígitos)</label>
-                                <input type="text" id="reg-tel" class="form-control" maxlength="8" required>
+                                <input type="text" id="reg-tel" class="form-control" maxlength="8" required style="border-radius: 10px;">
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-success w-100 py-2 font-weight-bold fs-5 shadow">Registrar Cuenta en el HIS</button>
+                        <button type="submit" class="btn btn-success w-100 py-2 font-weight-bold fs-5 shadow" style="border-radius: 15px; box-shadow: 0 4px 0 #198754 !important;">Registrar Cuenta en el HIS</button>
                         <button type="button" onclick="logout()" class="btn btn-link w-100 mt-2 text-muted btn-sm">← Regresar a consulta de DPI</button>
                     </form>
                 </div>
@@ -150,9 +194,9 @@
 
     <!-- PORTAL 1: DASHBOARD DEL PACIENTE -->
     <div id="view-dashboard-paciente" class="section-view">
-        <div class="alert alert-primary d-flex justify-content-between align-items-center mb-4 shadow-sm">
+        <div class="alert alert-primary d-flex justify-content-between align-items-center mb-4 shadow-sm" style="border-radius: 15px;">
             <span><strong>Mi Portal de Salud:</strong> Gestione sus citas médicas, visualice diagnósticos y consulte pagos.</span>
-            <span class="badge bg-primary fs-6">PACIENTE</span>
+            <span class="badge bg-primary fs-6" style="border-radius: 10px;">PACIENTE</span>
         </div>
         <div class="row">
             <div class="col-md-5">
@@ -160,52 +204,48 @@
                     <div class="card-header bg-primary text-white font-weight-bold">Agendar Nueva Cita Médica (CU-03)</div>
                     <div class="card-body p-4">
                         <div id="cita-alert" class="alert" style="display: none;"></div>
-                        <!-- FORMULARIO DE AGENDAMIENTO CON EMERGENCIA -->
                         <form id="form-agendar-cita" onsubmit="event.preventDefault(); agendarCitaPaciente();">
                             <div class="row g-3 mb-3">
                                 <div class="col-md-12">
                                     <label class="form-label font-weight-bold">1. Seleccione la Clínica / Sucursal</label>
-                                    <select id="cita-sucursal" class="form-select" onchange="cargarEspecialidadesCascada()" required>
+                                    <select id="cita-sucursal" class="form-select" onchange="cargarEspecialidadesCascada()" required style="border-radius: 10px;">
                                         <option value="">Seleccione una ubicación...</option>
                                     </select>
                                     <small id="lbl-direccion" class="text-muted d-block mt-1"></small>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label font-weight-bold">2. Especialidad Requerida</label>
-                                    <select id="cita-especialidad" class="form-select" disabled required>
+                                    <select id="cita-especialidad" class="form-select" disabled required style="border-radius: 10px;">
                                         <option value="">Primero seleccione sucursal</option>
                                     </select>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label font-weight-bold">3. Médico Disponible</label>
-                                    <select id="cita-medico" class="form-select" disabled required>
+                                    <select id="cita-medico" class="form-select" disabled required style="border-radius: 10px;">
                                         <option value="">Esperando fecha y hora...</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label font-weight-bold">Fecha y Hora de la Consulta</label>
-                                <input type="datetime-local" id="cita-fecha" class="form-control" required>
+                                <input type="datetime-local" id="cita-fecha" class="form-control" required style="border-radius: 10px;">
                                 <div class="form-text">El sistema evitará automáticamente los choques de horario.</div>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label font-weight-bold">Motivo de la Consulta</label>
-                                <input type="text" id="cita-motivo" class="form-control" placeholder="Ej: Dolor de cabeza persistente" required>
+                                <input type="text" id="cita-motivo" class="form-control" placeholder="Ej: Dolor de cabeza persistente" required style="border-radius: 10px;">
                             </div>
                             <div class="mb-3">
                                 <label class="form-label font-weight-bold">Observaciones adicionales (Opcional)</label>
-                                <textarea id="cita-observaciones" class="form-control" rows="2" placeholder="Ej: Síntomas desde hace 3 días..."></textarea>
+                                <textarea id="cita-observaciones" class="form-control" rows="2" placeholder="Ej: Síntomas desde hace 3 días..." style="border-radius: 10px;"></textarea>
                             </div>
-
-                            <!-- ¡AQUÍ ESTÁ LA CASILLA DE EMERGENCIA! -->
-                            <div class="form-check mb-4 p-3 bg-light border border-danger border-2 rounded shadow-sm">
+                            <div class="form-check mb-4 p-3 bg-light border border-danger border-2 rounded shadow-sm" style="border-radius: 15px !important;">
                                 <input class="form-check-input ms-1" type="checkbox" id="cita-emergencia" value="true" style="transform: scale(1.3);">
                                 <label class="form-check-label fw-bold text-danger ms-2" for="cita-emergencia">
                                     🚨 ¿Es una Emergencia Médica? (Atención prioritaria inmediata)
                                 </label>
                             </div>
-
-                            <button type="submit" class="btn btn-primary w-100 py-2 font-weight-bold fs-5 shadow">Programar Cita</button>
+                            <button type="submit" class="btn btn-primary w-100 py-2 font-weight-bold fs-5 shadow" style="border-radius: 15px; box-shadow: 0 4px 0 #0d6efd !important;">Programar Cita</button>
                         </form>
                     </div>
                 </div>
@@ -214,9 +254,9 @@
                 <div class="card border-dark">
                     <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                         <span>Mi Historial de Consultas y Recetas Médicas</span>
-                        <button onclick="recargarMisCitas()" class="btn btn-sm btn-outline-light">Refrescar</button>
+                        <button onclick="recargarMisCitas()" class="btn btn-sm btn-outline-light" style="border-radius: 10px;">Refrescar</button>
                     </div>
-                    <div class="card-body p-0">
+                    <div class="card-body p-0" style="border-radius: 0 0 20px 20px; overflow: hidden;">
                         <div id="lista-citas-paciente" class="p-3">
                             <p class="text-muted text-center my-3">Cargando su historial médico...</p>
                         </div>
@@ -226,50 +266,35 @@
         </div>
     </div>
 
-    <!-- PORTAL 5: DASHBOARD DE ADMISIÓN Y RECEPCIÓN (CORREGIDO) -->
+    <!-- PORTAL 5: DASHBOARD DE ADMISIÓN Y RECEPCIÓN (GAMIFICADO) -->
     <div id="panel-admision" class="section-view">
-        <div class="alert alert-warning d-flex justify-content-between align-items-center mb-4 shadow-sm">
-            <span><strong>Estación de Recepción y Admisión:</strong> Verificación de citas, control de sala de espera y registro de llegadas.</span>
-            <span class="badge bg-warning text-dark fs-6 font-weight-bold">RECEPCIÓN / ADMISIÓN</span>
+        <div class="alert alert-warning d-flex justify-content-between align-items-center mb-4 shadow-sm" style="border-radius: 15px; border: 2px solid #fbbf24; background-color: #fffbeb;">
+            <span><strong>👋 ¡Área de Recepción!</strong> Verifica pacientes y confirma llegadas.</span>
+            <div>
+                <!-- Botón de Refrescar Gamificado -->
+                <button onclick="cargarCitasRecepcion()" class="btn btn-warning btn-sm fw-bold me-2 text-dark" style="border-radius: 10px; box-shadow: 0 4px 0 #d97706; transition: transform 0.1s;">
+                    🔄 Refrescar
+                </button>
+                <span class="badge bg-warning text-dark fs-6 font-weight-bold" style="border-radius: 10px;">RECEPCIÓN</span>
+            </div>
         </div>
 
-        <!-- <div class="card border-warning shadow-sm mb-4">
-                 <div class="card-header bg-warning text-dark font-weight-bold">
-                      Búsqueda y Verificación de Citas
-                 </div>
-                 <div class="card-body p-4">
-                     <label class="form-label fw-bold">Tipo de Búsqueda:</label>
-                     <div class="btn-group w-100 mb-3" role="group">
-                         <input type="radio" class="btn-check" name="tipoBusqueda" id="btnPorDpi" value="POR_DPI" checked>
-                         <label class="btn btn-outline-dark" for="btnPorDpi">Por DPI</label>
-
-                         <input type="radio" class="btn-check" name="tipoBusqueda" id="btnPorCita" value="POR_CITA">
-                         <label class="btn btn-outline-dark" for="btnPorCita">🎫 Por No. Cita</label>
-                     </div>
-
-                     <div class="input-group">
-                         <input type="text" id="inputCriterio" class="form-control form-control-lg" placeholder="Ingrese el DPI o Número de Cita del paciente...">
-                         <button class="btn btn-dark px-4 fw-bold" onclick="ejecutarBusquedaRecepcion()">Buscar en Recepción</button>
-                     </div>
-                 </div>
-             </div>
--->
-             <!-- Contenedor dinámico de resultados (Aquí se dibujan los FA03, FA04 y tarjetas de cita) -->
-        <div id="contenedor-resultados-recepcion"></div>
+        <!-- Contenedor dinámico (Pediátrico / Gamificado) -->
+        <div id="contenedor-resultados-recepcion" class="grid-peds"></div>
     </div>
 
     <!-- PORTAL 2: DASHBOARD DEL MÉDICO -->
     <div id="view-dashboard-medico" class="section-view">
-        <div class="alert alert-success d-flex justify-content-between align-items-center mb-4 shadow-sm">
+        <div class="alert alert-success d-flex justify-content-between align-items-center mb-4 shadow-sm" style="border-radius: 15px;">
             <span><strong>Portal Clínico Especializado:</strong> Viendo únicamente pacientes asignados a su consulta personal.</span>
-            <span class="badge bg-success fs-6">MÉDICO ESPECIALISTA</span>
+            <span class="badge bg-success fs-6" style="border-radius: 10px;">MÉDICO ESPECIALISTA</span>
         </div>
         <div class="card border-success">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                 <span class="font-weight-bold fs-5">Mi Agenda de Citas Programadas</span>
-                <button onclick="cargarAgendaMedico(miUsuarioActual.id)" class="btn btn-sm btn-outline-light font-weight-bold">Refrescar Mi Agenda</button>
+                <button onclick="cargarAgendaMedico(miUsuarioActual.id)" class="btn btn-sm btn-outline-light font-weight-bold" style="border-radius: 10px;">Refrescar Mi Agenda</button>
             </div>
-            <div class="card-body p-0 table-responsive">
+            <div class="card-body p-0 table-responsive" style="border-radius: 0 0 20px 20px; overflow: hidden;">
                 <table class="table table-hover table-bordered mb-0">
                     <thead class="table-light">
                     <tr>
@@ -291,16 +316,16 @@
 
     <!-- PORTAL 3: DASHBOARD DE ENFERMERÍA -->
     <div id="view-dashboard-enfermeria" class="section-view">
-        <div class="alert alert-info d-flex justify-content-between align-items-center mb-4 shadow-sm">
+        <div class="alert alert-info d-flex justify-content-between align-items-center mb-4 shadow-sm" style="border-radius: 15px;">
             <span><strong>Estación de Enfermería:</strong> Control de pacientes en sala, asignación por médico y toma de signos vitales.</span>
-            <span class="badge bg-info text-dark fs-6 font-weight-bold">ENFERMERÍA</span>
+            <span class="badge bg-info text-dark fs-6 font-weight-bold" style="border-radius: 10px;">ENFERMERÍA</span>
         </div>
         <div class="card border-info">
             <div class="card-header bg-info text-dark font-weight-bold d-flex justify-content-between align-items-center">
                 <span class="fs-5">Sala de Espera General y Asignaciones</span>
-                <button onclick="cargarTriageEnfermeria()" class="btn btn-sm btn-dark font-weight-bold">Actualizar Lista</button>
+                <button onclick="cargarTriageEnfermeria()" class="btn btn-sm btn-dark font-weight-bold" style="border-radius: 10px;">Actualizar Lista</button>
             </div>
-            <div class="card-body p-0 table-responsive">
+            <div class="card-body p-0 table-responsive" style="border-radius: 0 0 20px 20px; overflow: hidden;">
                 <table class="table table-hover table-striped mb-0">
                     <thead class="table-dark">
                     <tr>
@@ -323,42 +348,38 @@
 
     <!-- PORTAL 4: DASHBOARD DE ADMINISTRACIÓN GENERAL -->
     <div id="view-dashboard-admin" class="section-view">
-        <div class="alert alert-dark d-flex justify-content-between align-items-center mb-3 shadow-sm">
+        <div class="alert alert-dark d-flex justify-content-between align-items-center mb-3 shadow-sm" style="border-radius: 15px;">
             <span><strong>Control Maestro:</strong> Gestión global de citas, cobros, sucursales y directorio.</span>
-            <span class="badge bg-dark fs-6">ADMINISTRACIÓN GENERAL</span>
+            <span class="badge bg-dark fs-6" style="border-radius: 10px;">ADMINISTRACIÓN GENERAL</span>
         </div>
 
-        <!-- Pestañas de Navegación Administrador -->
         <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active font-weight-bold" id="tab-citas-btn" onclick="verPestanaAdmin('panel-citas', this)">Citas y Cobros</button>
+                <button class="nav-link active font-weight-bold" id="tab-citas-btn" onclick="verPestanaAdmin('panel-citas', this)" style="border-radius: 10px 10px 0 0;">Citas y Cobros</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link font-weight-bold" id="tab-medicos-btn" onclick="verPestanaAdmin('panel-crear-medico', this)">Alta de Personal</button>
+                <button class="nav-link font-weight-bold" id="tab-medicos-btn" onclick="verPestanaAdmin('panel-crear-medico', this)" style="border-radius: 10px 10px 0 0;">Alta de Personal</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link font-weight-bold" id="tab-sucursales-btn" onclick="verPestanaAdmin('panel-sucursales', this)">Sucursales y Clínicas</button>
+                <button class="nav-link font-weight-bold" id="tab-sucursales-btn" onclick="verPestanaAdmin('panel-sucursales', this)" style="border-radius: 10px 10px 0 0;">Sucursales y Clínicas</button>
             </li>
             <li class="nav-item" role="presentation">
-                <button class="nav-link font-weight-bold" id="tab-usuarios-btn" onclick="verPestanaAdmin('panel-directorio', this)">Directorio General</button>
+                <button class="nav-link font-weight-bold" id="tab-usuarios-btn" onclick="verPestanaAdmin('panel-directorio', this)" style="border-radius: 10px 10px 0 0;">Directorio General</button>
             </li>
         </ul>
 
-        <!-- PESTAÑA 1: CITAS AGRUPADAS POR PACIENTE CON COBROS -->
         <div id="panel-citas" class="admin-pestana">
             <div class="card border-dark">
                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
                     <span>Control General y Facturación de Consultas (Agrupado por Paciente)</span>
-                    <button onclick="cargarTodasLasCitasAdmin()" class="btn btn-sm btn-outline-light fw-bold">🔄 Refrescar Citas</button>
+                    <button onclick="cargarTodasLasCitasAdmin()" class="btn btn-sm btn-outline-light fw-bold" style="border-radius: 10px;">🔄 Refrescar Citas</button>
                 </div>
                 <div class="card-body p-3">
                     <div class="row mb-3">
                         <div class="col-md-6">
-                            <input type="text" id="busqueda-citas-admin" class="form-control form-control-lg" placeholder="🔍 Buscar por Nombre de Paciente o DPI..." oninput="filtrarCitasAdmin()">
+                            <input type="text" id="busqueda-citas-admin" class="form-control form-control-lg" placeholder="🔍 Buscar por Nombre de Paciente o DPI..." oninput="filtrarCitasAdmin()" style="border-radius: 15px;">
                         </div>
                     </div>
-
-                    <!-- Aquí se dibujará dinámicamente el menú desplegable por paciente -->
                     <div id="contenedor-acordeon-citas">
                         <div class="text-center py-4 text-muted">Cargando y agrupando citas del hospital...</div>
                     </div>
@@ -366,7 +387,6 @@
             </div>
         </div>
 
-        <!-- PESTAÑA 2: ALTA DE PERSONAL MULTIFUNCIÓN -->
         <div id="panel-crear-medico" class="admin-pestana">
             <div class="row justify-content-center">
                 <div class="col-md-8">
@@ -376,20 +396,18 @@
                             <div id="medico-alert" class="alert" style="display: none;"></div>
                             <form id="form-alta-personal" onsubmit="event.preventDefault(); crearPersonalAdmin();">
 
-                                <!-- Selector de Rol -->
                                 <div class="mb-4">
                                     <label class="form-label font-weight-bold text-success">Tipo de Empleado / Rol a Asignar</label>
-                                    <select id="emp-rol" class="form-select font-weight-bold border-success" onchange="alternarCamposMedico()" required>
+                                    <select id="emp-rol" class="form-select font-weight-bold border-success" onchange="alternarCamposMedico()" required style="border-radius: 10px;">
                                         <option value="MEDIC">Médico / Especialista</option>
                                         <option value="ENFERMERO">Enfermero / Enfermera</option>
                                         <option value="RECEPCION">Personal de Recepción / Admisión</option>
                                     </select>
                                 </div>
 
-                                <!-- Selector de Sucursal para Personal -->
                                 <div id="div-sucursal-alta" class="mb-4">
                                     <label class="form-label font-weight-bold">Asignar a Clínica / Sucursal</label>
-                                    <select id="reg-sucursal" class="form-select border-primary font-weight-bold" onchange="filtrarEspecialidadesPorSucursalAdmin()" required>
+                                    <select id="reg-sucursal" class="form-select border-primary font-weight-bold" onchange="filtrarEspecialidadesPorSucursalAdmin()" required style="border-radius: 10px;">
                                         <option value="">Seleccione primero una sucursal...</option>
                                     </select>
                                     <div class="form-text">Debe asignar la ubicación física del empleado para continuar.</div>
@@ -399,27 +417,26 @@
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label font-weight-bold">Nombre Completo</label>
                                         <input type="text" id="med-nombre" class="form-control" placeholder="Ej: Dr. Roberto Gómez"
-                                               oninput="generarUsuarioAutomatico('med-nombre', 'med-dpi', 'med-user')" required>
+                                               oninput="generarUsuarioAutomatico('med-nombre', 'med-dpi', 'med-user')" required style="border-radius: 10px;">
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label font-weight-bold">DPI / CUI (13 dígitos)</label>
-                                        <input type="text" id="med-dpi" class="form-control font-monospace" maxlength="13" required>
+                                        <input type="text" id="med-dpi" class="form-control font-monospace" maxlength="13" required style="border-radius: 10px;">
                                     </div>
                                 </div>
 
-                                <!-- Sección Exclusiva Médico -->
                                 <div id="seccion-especialidad-precio" class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label font-weight-bold">Especialidad Médica (Filtrada por Sucursal)</label>
-                                        <select id="med-esp" class="form-select" disabled>
+                                        <select id="med-esp" class="form-select" disabled style="border-radius: 10px;">
                                             <option value="">Primero seleccione una sucursal arriba</option>
                                         </select>
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label font-weight-bold">Precio por Consulta (Q. Quetzales)</label>
                                         <div class="input-group">
-                                            <span class="input-group-text bg-success text-white font-weight-bold">Q.</span>
-                                            <input type="number" step="0.01" id="med-precio" class="form-control font-weight-bold" placeholder="350.00" value="350.00">
+                                            <span class="input-group-text bg-success text-white font-weight-bold" style="border-radius: 10px 0 0 10px;">Q.</span>
+                                            <input type="number" step="0.01" id="med-precio" class="form-control font-weight-bold" placeholder="350.00" value="350.00" style="border-radius: 0 10px 10px 0;">
                                         </div>
                                     </div>
                                 </div>
@@ -427,24 +444,24 @@
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label font-weight-bold">Usuario de Acceso</label>
-                                        <input type="text" id="med-user" class="form-control bg-light font-monospace text-success font-weight-bold" readonly required>
+                                        <input type="text" id="med-user" class="form-control bg-light font-monospace text-success font-weight-bold" readonly required style="border-radius: 10px;">
                                     </div>
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label font-weight-bold">Contraseña</label>
-                                        <input type="password" id="med-pass" class="form-control" required>
+                                        <input type="password" id="med-pass" class="form-control" required style="border-radius: 10px;">
                                     </div>
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6 mb-4">
                                         <label class="form-label font-weight-bold">Correo Electrónico</label>
-                                        <input type="email" id="med-email" class="form-control" placeholder="personal@hospital.com" required>
+                                        <input type="email" id="med-email" class="form-control" placeholder="personal@hospital.com" required style="border-radius: 10px;">
                                     </div>
                                     <div class="col-md-6 mb-4">
                                         <label class="form-label font-weight-bold">Teléfono (Exactamente 8 dígitos)</label>
-                                        <input type="text" id="med-tel" class="form-control" placeholder="45789658" maxlength="8" required>
+                                        <input type="text" id="med-tel" class="form-control" placeholder="45789658" maxlength="8" required style="border-radius: 10px;">
                                     </div>
                                 </div>
-                                <button type="submit" id="btn-guardar-personal" class="btn btn-success w-100 py-3 font-weight-bold fs-5 shadow">Registrar Empleado</button>
+                                <button type="submit" id="btn-guardar-personal" class="btn btn-success w-100 py-3 font-weight-bold fs-5 shadow" style="border-radius: 15px; box-shadow: 0 4px 0 #198754 !important;">Registrar Empleado</button>
                             </form>
                         </div>
                     </div>
@@ -452,7 +469,6 @@
             </div>
         </div>
 
-        <!-- PESTAÑA 3: GESTIÓN DE SUCURSALES Y CREACIÓN DE ESPECIALIDADES -->
         <div id="panel-sucursales" class="admin-pestana">
             <div class="card border-primary mb-4">
                 <div class="card-header bg-primary text-white font-weight-bold">Agregar Nueva Sucursal o Clínica</div>
@@ -460,20 +476,17 @@
                     <div class="row g-3">
                         <div class="col-md-5">
                             <label class="form-label small font-weight-bold">Nombre de la Sucursal</label>
-                            <input type="text" id="nueva-suc-nombre" class="form-control" placeholder="Ej: Clínica Especialidades Sur">
+                            <input type="text" id="nueva-suc-nombre" class="form-control" placeholder="Ej: Clínica Especialidades Sur" style="border-radius: 10px;">
                         </div>
                         <div class="col-md-7">
                             <label class="form-label small font-weight-bold">Dirección Exacta</label>
-                            <input type="text" id="nueva-suc-dir" class="form-control" placeholder="Ej: 5ta Avenida 10-20 Zona 1">
+                            <input type="text" id="nueva-suc-dir" class="form-control" placeholder="Ej: 5ta Avenida 10-20 Zona 1" style="border-radius: 10px;">
                         </div>
-
-                        <!-- SECCIÓN PARA CREAR Y SELECCIONAR ESPECIALIDADES -->
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <label class="form-label small font-weight-bold text-primary mb-0">Seleccione las Especialidades que se ofrecerán en esta Sucursal:</label>
                             </div>
-
-                            <div class="row g-2 border rounded p-3 bg-light mb-3" id="contenedor-esp-sucursal">
+                            <div class="row g-2 border rounded p-3 bg-light mb-3" id="contenedor-esp-sucursal" style="border-radius: 15px !important;">
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input chk-esp" type="checkbox" value="Medicina General" id="esp-1"><label class="form-check-label" for="esp-1">Medicina General</label></div></div>
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input chk-esp" type="checkbox" value="Cardiología" id="esp-2"><label class="form-check-label" for="esp-2">Cardiología</label></div></div>
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input chk-esp" type="checkbox" value="Pediatría" id="esp-3"><label class="form-check-label" for="esp-3">Pediatría</label></div></div>
@@ -482,16 +495,14 @@
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input chk-esp" type="checkbox" value="Neurología" id="esp-6"><label class="form-check-label" for="esp-6">Neurología</label></div></div>
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input chk-esp" type="checkbox" value="Dermatología" id="esp-7"><label class="form-check-label" for="esp-7">Dermatología</label></div></div>
                             </div>
-
                             <div class="input-group w-50">
-                                <span class="input-group-text bg-secondary text-white small">Nueva Especialidad:</span>
+                                <span class="input-group-text bg-secondary text-white small" style="border-radius: 10px 0 0 10px;">Nueva Especialidad:</span>
                                 <input type="text" id="input-nueva-especialidad" class="form-control form-control-sm" placeholder="Ej: Oncología, Oftalmología...">
-                                <button type="button" onclick="agregarEspecialidadAlMenu()" class="btn btn-secondary btn-sm font-weight-bold">Añadir a la Lista</button>
+                                <button type="button" onclick="agregarEspecialidadAlMenu()" class="btn btn-secondary btn-sm font-weight-bold" style="border-radius: 0 10px 10px 0;">Añadir a la Lista</button>
                             </div>
                         </div>
-
                         <div class="col-12 d-flex justify-content-end mt-4">
-                            <button onclick="guardarNuevaSucursal()" class="btn btn-success font-weight-bold px-5">Guardar Sucursal</button>
+                            <button onclick="guardarNuevaSucursal()" class="btn btn-success font-weight-bold px-5" style="border-radius: 15px; box-shadow: 0 4px 0 #198754;">Guardar Sucursal</button>
                         </div>
                     </div>
                 </div>
@@ -500,9 +511,9 @@
             <div class="card border-secondary">
                 <div class="card-header bg-secondary text-white font-weight-bold d-flex justify-content-between align-items-center">
                     <span>Listado de Sucursales y Especialidades Registradas</span>
-                    <button onclick="cargarSucursalesAdmin()" class="btn btn-sm btn-outline-light">Actualizar</button>
+                    <button onclick="cargarSucursalesAdmin()" class="btn btn-sm btn-outline-light" style="border-radius: 10px;">Actualizar</button>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body p-0" style="border-radius: 0 0 20px 20px; overflow: hidden;">
                     <table class="table table-bordered table-hover mb-0">
                         <thead class="table-light">
                         <tr>
@@ -520,17 +531,16 @@
             </div>
         </div>
 
-        <!-- PESTAÑA 4: DIRECTORIO GENERAL CON DPI Y ACCIONES DE USUARIO -->
         <div id="panel-directorio" class="admin-pestana">
             <div class="card border-secondary">
                 <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
                     <span>Directorio General de Usuarios</span>
-                    <button onclick="cargarUsuariosAdmin()" class="btn btn-sm btn-outline-light">Actualizar</button>
+                    <button onclick="cargarUsuariosAdmin()" class="btn btn-sm btn-outline-light" style="border-radius: 10px;">Actualizar</button>
                 </div>
                 <div class="card-body p-3">
                     <div class="row g-2 mb-3">
                         <div class="col-md-3">
-                            <select id="filtro-campo" class="form-select">
+                            <select id="filtro-campo" class="form-select" style="border-radius: 10px;">
                                 <option value="id">ID</option>
                                 <option value="nombre" selected>Nombre</option>
                                 <option value="email">Correo Electrónico</option>
@@ -540,10 +550,10 @@
                             </select>
                         </div>
                         <div class="col-md-7">
-                            <input type="text" id="filtro-texto" class="form-control" placeholder="Buscar en el directorio..." onkeyup="if(event.key==='Enter') buscarUsuarios()">
+                            <input type="text" id="filtro-texto" class="form-control" placeholder="Buscar en el directorio..." onkeyup="if(event.key==='Enter') buscarUsuarios()" style="border-radius: 10px;">
                         </div>
                         <div class="col-md-2">
-                            <button onclick="buscarUsuarios()" class="btn btn-primary w-100 font-weight-bold">Buscar</button>
+                            <button onclick="buscarUsuarios()" class="btn btn-primary w-100 font-weight-bold" style="border-radius: 10px;">Buscar</button>
                         </div>
                     </div>
                     <div class="table-responsive">
@@ -568,7 +578,7 @@
                     <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
                         <div class="d-flex align-items-center gap-2">
                             <label class="form-label mb-0 small text-muted">Elementos por página:</label>
-                            <select id="elementos-por-pagina" class="form-select form-select-sm w-auto" onchange="cambiarElementosPorPagina()">
+                            <select id="elementos-por-pagina" class="form-select form-select-sm w-auto" onchange="cambiarElementosPorPagina()" style="border-radius: 10px;">
                                 <option value="10">10</option>
                                 <option value="25">25</option>
                                 <option value="50">50</option>
@@ -576,8 +586,8 @@
                         </div>
                         <span id="conteo-registros" class="small text-muted">Mostrando 0 de 0 registros</span>
                         <div>
-                            <button id="btn-prev-pag" onclick="cambiarPagina(-1)" class="btn btn-sm btn-outline-secondary" disabled>Anterior</button>
-                            <button id="btn-next-pag" onclick="cambiarPagina(1)" class="btn btn-sm btn-outline-secondary" disabled>Siguiente</button>
+                            <button id="btn-prev-pag" onclick="cambiarPagina(-1)" class="btn btn-sm btn-outline-secondary" disabled style="border-radius: 10px;">Anterior</button>
+                            <button id="btn-next-pag" onclick="cambiarPagina(1)" class="btn btn-sm btn-outline-secondary" disabled style="border-radius: 10px;">Siguiente</button>
                         </div>
                     </div>
                 </div>
@@ -591,8 +601,8 @@
 <!-- MODAL UNIVERSAL PARA VISUALIZAR EXPEDIENTES CLÍNICOS -->
 <div class="modal fade" id="modalExpediente" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white">
+        <div class="modal-content border-0 shadow" style="border-radius: 25px;">
+            <div class="modal-header bg-primary text-white" style="border-radius: 25px 25px 0 0;">
                 <h5 class="modal-title font-weight-bold">Expediente Clínico Electrónico</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
@@ -601,8 +611,8 @@
                     <p class="text-center text-muted py-3">Cargando información desde la base de datos...</p>
                 </div>
             </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar Ventana</button>
+            <div class="modal-footer bg-light" style="border-radius: 0 0 25px 25px;">
+                <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal" style="border-radius: 10px;">Cerrar Ventana</button>
             </div>
         </div>
     </div>
@@ -611,16 +621,14 @@
 <!-- Modal Dinámico para Ver Detalles del Usuario -->
 <div class="modal fade" id="modalDetallesUsuario" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content shadow-lg border-0">
-            <div class="modal-header bg-dark text-white">
+        <div class="modal-content shadow-lg border-0" style="border-radius: 25px;">
+            <div class="modal-header bg-dark text-white" style="border-radius: 25px 25px 0 0;">
                 <h5 class="modal-title"><i class="fas fa-id-card me-2"></i>Expediente de Usuario</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <div class="modal-body p-4" id="contenido-detalles-usuario">
-                <!-- Aquí se inyectarán los datos dinámicamente con JavaScript -->
-            </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            <div class="modal-body p-4" id="contenido-detalles-usuario"></div>
+            <div class="modal-footer bg-light" style="border-radius: 0 0 25px 25px;">
+                <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal" style="border-radius: 10px;">Cerrar</button>
             </div>
         </div>
     </div>
@@ -633,7 +641,6 @@
     function alternarCamposMedico() {
         const rol = document.getElementById("emp-rol").value;
         const cajaEspecialidad = document.getElementById("seccion-especialidad-precio");
-
         if (rol === "MEDIC") {
             if (cajaEspecialidad) cajaEspecialidad.style.display = "flex";
         } else {

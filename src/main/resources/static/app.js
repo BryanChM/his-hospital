@@ -770,9 +770,7 @@ async function guardarTriageInline(citaId, nombrePaciente) {
     }
 }
 
-// =========================================================================
-// MODULO DE MEDICOS
-// =========================================================================
+
 async function cargarAgendaMedico(idMedico) {
     const tabla = document.getElementById("tabla-agenda-medico");
     if (!tabla) return;
@@ -893,9 +891,7 @@ async function guardarRecetaInline(citaId, nombrePaciente) {
     }
 }
 
-// =========================================================================
-// MODULO ADMINISTRADOR Y COMUNES
-// =========================================================================
+
 function verPestanaAdmin(idPestana, botonClickeado) {
     document.querySelectorAll(".admin-pestana").forEach(p => p.style.display = "none");
     document.querySelectorAll("#adminTabs .nav-link").forEach(b => b.classList.remove("active"));
@@ -1439,4 +1435,21 @@ function desbloquearUsuario(id, nombre) {
         .then(response => { if (!response.ok) throw new Error("Error en servidor."); return response.json(); })
         .then(data => { alert(`La cuenta de ${nombre} ha sido desbloqueada.`); if (typeof cargarUsuariosAdmin === "function") { cargarUsuariosAdmin(); } else { location.reload(); } })
         .catch(error => { alert("No se pudo desbloquear al usuario."); });
+}
+function recargarMisCitas() {
+    // 1. Verificamos que tengamos el ID del paciente guardado en memoria
+    if (!miPacienteId) {
+        document.getElementById("lista-citas-paciente").innerHTML =
+            '<p class="text-danger text-center my-3">Error de sesión. Por favor inicie sesión de nuevo.</p>';
+        return;
+    }
+
+    // 2. Mostramos el mensaje de carga
+    const contenedor = document.getElementById("lista-citas-paciente");
+    if (contenedor) {
+        contenedor.innerHTML = '<p class="text-muted text-center my-3">Actualizando su historial médico...</p>';
+    }
+
+    // 3. Llamamos a tu función nativa que ya pinta las citas correctamente
+    renderizarMisCitas();
 }
