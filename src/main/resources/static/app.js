@@ -12,7 +12,19 @@ let paginaActualUsuarios = 1;
 let elementosPorPaginaUsuarios = 10;
 let listaSucursales = [];
 let listaGlobalSucursalesAdmin = [];
+// --- PRECARGADOR DE VOCES EN ESPAÑOL ---
+let vocesDelSistema = [];
 
+if ('speechSynthesis' in window) {
+    // Esto obliga al navegador a guardar las voces en cuanto estén listas
+    window.speechSynthesis.onvoiceschanged = () => {
+        vocesDelSistema = window.speechSynthesis.getVoices();
+        console.log("Catálogo de voces cargado. Total:", vocesDelSistema.length);
+    };
+    // Hacemos un primer intento por si ya estaban cargadas
+    vocesDelSistema = window.speechSynthesis.getVoices();
+}
+// ----------------------------------------
 
 function obtenerIdSucursal(entidad) {
     if (!entidad) return null;
@@ -282,57 +294,135 @@ async function renderizarMisCitas() {
         const respCitas = await fetch(`${API_URL}/citas/paciente/${miPacienteId}`);
         const citas = await respCitas.json();
 
-        if (citas.length === 0) {
-            contenedor.innerHTML = `<div class="alert alert-info text-center my-3">No tiene citas medicas programadas actualmente.</div>`;
+        // Filtrar para ocultar las citas canceladas de la vista del paciente ("se borren de ahí")
+        const citasActivas = citas.filter(c => c.estado !== "CANCELADA");
+
+        if (citasActivas.length === 0) {
+            contenedor.innerHTML = `<div class="alert alert-info text-center my-3 p-4 rounded-4 shadow-sm">No tiene citas médicas programadas actualmente.</div>`;
             return;
         }
 
-        let html = `<div class="list-group">`;
-        citas.forEach(c => {
-            let badge = "bg-primary";
+        let html = `<div class="d-flex flex-column gap-3">`;
+
+        for (const c of citasActivas) {
+            // Dentro de renderizarMisCitas, ajusta esta parte de los estados:
+            let badgeClass = "bg-primary";
+            let estadoTexto = c.estado || "PROGRAMADA";
+
+// Si la especialidad o el motivo indican que es un seguimiento, le damos su propio diseño y etiqueta
+            const esSeguimiento = (c.especialidad && c.especialidad.includes("Seguimiento")) || (c.motivo && c.motivo.includes("Seguimiento"));
+
+            if (esSeguimiento) {
+                badgeClass = "bg-info text-dark font-weight-bold"; // O un color personalizado como bg-purple si prefieres
+                estadoTexto = "CITA DE SEGUIMIENTO";
+            } else if (estadoTexto === "ATENDIDA" || estadoTexto === "ATENCION_FINALIZADA" || estadoTexto === "COMPLETADA") {
+                badgeClass = "bg-success";
+            } else if (estadoTexto === "EN_SALA_DE_ESPERA") {
+                badgeClass = "bg-info text-dark";
+            } else if (estadoTexto === "AGENDADA" || estadoTexto === "PROGRAMADA") {
+                badgeClass = "bg-warning text-dark";
+            }
             let btnCancelar = "";
-
-            if (c.estado === "CANCELADA") badge = "bg-danger";
-            if (c.estado === "ATENDIDA" || c.estado === "COMPLETADA") badge = "bg-success";
-            if (c.estado === "EN_SALA_DE_ESPERA") badge = "bg-info text-dark font-weight-bold";
-
-            if (c.estado === "PROGRAMADA" || c.estado === "AGENDADA" || c.estado === "EN_SALA_DE_ESPERA") {
-                btnCancelar = `<button onclick="cancelarCitaPaciente(${c.id})" class="btn btn-outline-danger btn-sm mt-2 font-weight-bold">Cancelar Cita</button>`;
+            if (estadoTexto === "PROGRAMADA" || estadoTexto === "AGENDADA" || estadoTexto === "EN_SALA_DE_ESPERA") {
+                btnCancelar = `<button onclick="cancelarCitaPaciente(${c.id})" class="btn btn-outline-danger btn-sm fw-bold rounded-pill px-3">Cancelar Cita</button>`;
             }
 
+            // Dentro de la función renderizarMisCitas, reemplaza la sección de detallesMedicoHtml por esta:
+
+            let detallesMedicoHtml = "";
+            try {
+                const [respReceta, respLab] = await Promise.all([
+                    fetch(`${API_URL}/recetas/cita/${c.id}`),
+                    fetch(`${API_URL}/laboratorio/cita/${c.id}`)
+                ]);
+
+                const recetas = respReceta.ok ? await respReceta.json() : [];
+                const laboratorios = respLab.ok ? await respLab.json() : [];
+
+                if (recetas.length > 0 || laboratorios.length > 0 || c.observaciones) {
+                    detallesMedicoHtml += `<div class="mt-3 p-3 bg-light rounded-4 border">`;
+
+                    if (c.observaciones) {
+                        // Filtramos y mostramos ordenadamente lo que el médico escribió
+                        detallesMedicoHtml += `<p class="mb-2 text-dark small"><strong>📋 Informe Médico / Diagnóstico:</strong><br>${c.observaciones}</p>`;
+                    }
+
+                    if (recetas.length > 0) {
+                        detallesMedicoHtml += `<div class="text-success small mb-1"><strong>💊 Receta Médica:</strong>`;
+                        recetas.forEach(r => {
+                            detallesMedicoHtml += `<br>• ${r.medicamento} (${r.dosis}) - Frecuencia: ${r.frecuencia}. ${r.indicaciones ? 'Instrucciones: ' + r.indicaciones : ''}`;
+                        });
+                        detallesMedicoHtml += `</div>`;
+                    }
+
+                    if (laboratorios.length > 0) {
+                        detallesMedicoHtml += `<div class="text-info text-dark small mt-2"><strong>🧪 Órdenes de Laboratorio:</strong>`;
+                        laboratorios.forEach(l => {
+                            detallesMedicoHtml += `<br>• Orden #${l.numeroOrden}: ${l.examenes} (${l.observaciones || 'Sin observaciones'})`;
+                        });
+                        detallesMedicoHtml += `</div>`;
+                    }
+
+                    detallesMedicoHtml += `</div>`;
+                }
+            } catch (e) {
+                // Omitir error secundario
+            }
+
+
+
             html += `
-                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3">
-                    <div>
-                        <h6 class="mb-1 font-weight-bold text-primary">Consulta con: ${c.medico ? c.medico.nombre : 'Medico Asignado'}</h6>
-                        <p class="mb-1"><strong>Motivo:</strong> ${c.motivo}</p>
-                        ${c.observaciones ? `<p class="mb-1 text-dark"><small><strong>Obs / Diagnostico:</strong> <em>${c.observaciones}</em></small></p>` : ''}
-                        <small class="text-secondary"><strong>Fecha programada:</strong> ${c.fechaHora.replace('T', ' a las ')} horas</small>
-                        <div class="mt-1">${btnCancelar}</div>
+                <div class="card border-0 shadow-sm rounded-4 p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h5 class="fw-bold text-primary mb-1">Consulta con: ${c.medico ? c.medico.nombre : 'Médico Asignado'}</h5>
+                            <span class="badge bg-light text-secondary border">${c.especialidad || 'Medicina General'}</span>
+                        </div>
+                        <span class="badge ${badgeClass} fs-6 px-3 py-2 rounded-pill shadow-sm">${estadoTexto}</span>
                     </div>
-                    <span class="badge ${badge} fs-6 px-3 py-2 rounded-pill">${c.estado}</span>
+                    
+                    <div class="mb-2 text-secondary small">
+                        <strong>Motivo:</strong> <span class="text-dark">${c.motivo}</span>
+                    </div>
+                    
+                    <div class="text-muted small mb-1">
+                        <strong>📅 Fecha programada:</strong> ${c.fechaHora.replace('T', ' a las ')} horas
+                    </div>
+
+                    ${detallesMedicoHtml}
+
+                    <div class="d-flex justify-content-end align-items-center mt-3 pt-2 border-top">
+                        ${btnCancelar}
+                    </div>
                 </div>`;
-        });
+        }
         html += `</div>`;
         contenedor.innerHTML = html;
     } catch (error) {
-        contenedor.innerHTML = `<div class="alert alert-danger">Error al cargar su historial de citas.</div>`;
+        contenedor.innerHTML = `<div class="alert alert-danger rounded-4 text-center">Error al cargar su historial de citas.</div>`;
     }
 }
 
 async function cancelarCitaPaciente(citaId) {
-    if (!confirm("¿Esta seguro de que desea cancelar esta cita medica?")) return;
+    if (!confirm("¿Está seguro de que desea cancelar esta cita médica?")) return;
     try {
         const respuesta = await fetch(`${API_URL}/citas/cancelar/${citaId}`, { method: "PUT" });
         if (respuesta.ok) {
-            alert("La cita ha sido cancelada exitosamente.");
+            // Registrar acción en la bitácora de auditoría del sistema
+            if (typeof registrarAuditoria === "function") {
+                await registrarAuditoria("CANCELACION", `El paciente canceló la cita médica #${citaId}`);
+            }
+            alert("La cita ha sido cancelada exitosamente y enviada al registro de bitácora.");
             renderizarMisCitas();
         } else {
             alert("Error: No se pudo cancelar la cita.");
         }
     } catch (error) {
-        alert("Error de conexion al intentar cancelar la cita.");
+        alert("Error de conexión al intentar cancelar la cita.");
     }
 }
+
+
 
 async function cargarSucursalesPaciente() {
     const selectSucursal = document.getElementById("cita-sucursal");
@@ -672,18 +762,30 @@ async function cargarTriageEnfermeria() {
             return;
         }
 
-        const estadosPendientes = ["EN_ESPERA_TRIAGE", "CONFIRMADA", "PROGRAMADA", "AGENDADA"];
-        const todasPendientes = citas.filter(c => estadosPendientes.includes(c.estado));
+        // 📌 CORRECCIÓN: Se habilitan todos los estados posibles que envía Recepción al confirmar llegada
+        const estadosValidosEnfermeria = [
+            "EN_SALA_DE_ESPERA",
+            "EN_ESPERA_TRIAGE",
+            "CONFIRMADA",
+            "LLEGADA_CONFIRMADA",
+            "PRESENTE"
+        ];
 
-        const pendientesSucursal = todasPendientes.filter(c => {
+        const pendientesSucursal = citas.filter(c => {
             const sucCitaId = obtenerIdSucursal(c);
             if (!sucCitaId) return false;
-            return (sucCitaId === sucEnfermeraId);
+
+            // 1. Debe coincidir la sucursal de la enfermera con la de la cita
+            const mismaSucursal = (String(sucCitaId) === String(sucEnfermeraId));
+
+            // 2. El estado debe ser uno de los que envía recepción
+            const estadoListo = estadosValidosEnfermeria.includes(c.estado);
+
+            return mismaSucursal && estadoListo;
         });
 
-        // MENSAJE LIMPIO (SIN DIAGNÓSTICO)
         if (pendientesSucursal.length === 0) {
-            tabla.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted font-weight-bold">No hay pacientes pendientes de toma de signos vitales en su sucursal en este momento.</td></tr>`;
+            tabla.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted font-weight-bold">No hay pacientes en sala de espera en su sucursal.</td></tr>`;
             return;
         }
 
@@ -705,7 +807,7 @@ async function cargarTriageEnfermeria() {
                     </td>
                     <td><strong class="text-primary fs-6">${medObj.nombre}</strong></td>
                     <td><span class="badge bg-light text-dark border">${c.especialidad || medObj.especialidad || 'General'}</span></td>
-                    <td><span class="badge bg-warning text-dark font-weight-bold px-2 py-1">${c.estado}</span></td>
+                    <td><span class="badge bg-info text-dark font-weight-bold px-2 py-1">${c.estado}</span></td>
                     <td><button onclick="toggleFilaTriage(${c.id})" class="btn btn-info btn-sm text-dark font-weight-bold shadow-sm">Tomar Signos</button></td>
                 </tr>
                 <tr id="caja-triage-${c.id}" style="display: none;" class="bg-light">
@@ -726,7 +828,6 @@ async function cargarTriageEnfermeria() {
         tabla.innerHTML = `<tr><td colspan="7" class="text-danger text-center py-4">Error al conectar con la estación de enfermería.</td></tr>`;
     }
 }
-
 function toggleFilaTriage(citaId) {
     const filaFormulario = document.getElementById(`caja-triage-${citaId}`);
     if (filaFormulario.style.display === "none") {
@@ -740,116 +841,278 @@ function toggleFilaTriage(citaId) {
 }
 
 async function guardarTriageInline(citaId, nombrePaciente) {
-    const pA = document.getElementById(`pa-${citaId}`).value.trim();
-    const temp = document.getElementById(`temp-${citaId}`).value.trim();
-    const pulso = document.getElementById(`pulso-${citaId}`).value.trim();
+    const pa = document.getElementById(`pa-${citaId}`).value;
+    const temp = document.getElementById(`temp-${citaId}`).value;
+    const pulso = document.getElementById(`pulso-${citaId}`).value;
 
-    if (!pA || !temp || !pulso) {
-        alert("Por favor completa los 3 signos vitales antes de enviar al medico.");
+    if (!pa || !temp || !pulso) {
+        alert("Debe completar todos los signos vitales (Presión, Temperatura y Pulso) antes de enviar.");
         return;
     }
 
-    const textoTriage = `Triage: PA ${pA} | Temp ${temp} C | Pulso ${pulso} lpm`;
+    const triageTexto = `Triage: PA ${pa} | Temp ${temp}°C | Pulso ${pulso} lpm`;
 
     try {
-        const respuesta = await fetch(`${API_URL}/citas/triage/${citaId}`, {
+        // 1. Guardar los signos vitales en las observaciones de la cita
+        await fetch(`${API_URL}/citas/triage/${citaId}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ observaciones: textoTriage })
+            body: JSON.stringify({ observaciones: triageTexto })
         });
 
-        if (respuesta.ok) {
-            alert(`Signos vitales guardados para ${nombrePaciente}.\nEl paciente pasa a sala de espera en la agenda del medico.`);
-            cargarTriageEnfermeria();
+        // 2. Cambiar el estado de la cita a EN_ESPERA_MEDICO (esto la saca de enfermería y la manda al médico)
+        const respEstado = await fetch(`${API_URL}/citas/${citaId}/estado?nuevoEstado=EN_ESPERA_MEDICO`, {
+            method: "PUT"
+        });
+
+        if (respEstado.ok) {
+            alert(`¡Signos vitales de ${nombrePaciente} guardados con éxito! El paciente ha sido enviado a la lista de espera del médico y removido de su estación.`);
+
+            // Recargar la tabla de enfermería para que el paciente desaparezca de inmediato
+            if (typeof cargarTriageEnfermeria === "function") {
+                cargarTriageEnfermeria();
+            }
         } else {
-            const errText = await respuesta.text();
-            alert("Error en el servidor al intentar guardar el triage: " + errText);
+            alert("Se guardaron los signos, pero hubo un error al actualizar el estado de la cita.");
         }
     } catch (error) {
-        alert("Error de comunicacion con el servidor.");
+        alert("Error de red al intentar guardar los signos vitales.");
     }
 }
 
 
-async function cargarAgendaMedico(idMedico) {
-    const tabla = document.getElementById("tabla-agenda-medico");
-    if (!tabla) return;
-    tabla.innerHTML = `<tr><td colspan="6" class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2 text-muted">Consultando pacientes en sala de espera...</p></td></tr>`;
+// Variable global para el temporizador de auto-recarga del médico
+let intervaloMedico = null;
+let tiempoRestanteMedico = 30;
+
+async function cargarAgendaMedico() {
+    const miId = String(miUsuarioActual?.id || miUsuarioActual?.usuario_id);
+    if (!miId) return;
+
+    // Reiniciar temporizador de 30 segundos [CU-08 Flujo Normal 1]
+    clearInterval(intervaloMedico);
+    tiempoRestanteMedico = 30;
+    actualizarTextoTemporizador();
+    intervaloMedico = setInterval(() => {
+        tiempoRestanteMedico--;
+        actualizarTextoTemporizador();
+        if (tiempoRestanteMedico <= 0) {
+            cargarAgendaMedico(); // Recarga automática
+        }
+    }, 1000);
+
+    const colEspera = document.getElementById("med-col-espera");
+    const colConsulta = document.getElementById("med-col-consulta");
+    const colEvaluados = document.getElementById("med-col-evaluados");
+    if (!colEspera || !colConsulta || !colEvaluados) return;
 
     try {
         const [respCitas, respUsers] = await Promise.all([
-            fetch(`${API_URL}/citas`),
-            fetch(`${API_URL}/users`)
+            fetch(`${API_URL}/citas`), fetch(`${API_URL}/users`)
         ]);
 
         const todasLasCitas = await respCitas.json();
         const usuarios = await respUsers.json();
         const mapaUsers = {};
-        if (Array.isArray(usuarios)) {
-            usuarios.forEach(u => { mapaUsers[String(u.id)] = u; });
-        }
+        if (Array.isArray(usuarios)) usuarios.forEach(u => { mapaUsers[String(u.id)] = u; });
 
-        const miId = String(idMedico || miUsuarioActual?.id || miUsuarioActual?.usuario_id);
         const datosMedico = mapaUsers[miId] || miUsuarioActual || {};
         const sucMedicoId = obtenerIdSucursal(datosMedico);
 
-        if (!sucMedicoId) {
-            tabla.innerHTML = `<tr><td colspan="6" class="text-danger text-center fw-bold py-4">Atencion: Su perfil de Medico no tiene una sucursal asignada.</td></tr>`;
-            return;
-        }
-
+        // Filtrar citas que pertenecen al médico y a su clínica
         const misCitas = todasLasCitas.filter(c => {
-            const medCitaId = obtenerIdMedico(c);
-            const sucCitaId = obtenerIdSucursal(c);
-            if (!medCitaId || !sucCitaId) return false;
-
-            const esMiPaciente = (medCitaId === miId);
-            const coincideSucursal = (sucCitaId === sucMedicoId);
-            const estaEnSala = ["EN_ESPERA_TRIAGE", "EN_SALA_DE_ESPERA", "PACIENTE_PRESENTE"].includes(c.estado);
-
-            return esMiPaciente && coincideSucursal && estaEnSala;
+            return String(obtenerIdMedico(c)) === miId && String(obtenerIdSucursal(c)) === sucMedicoId;
         });
 
-        if (misCitas.length === 0) {
-            tabla.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted font-weight-bold">No tiene pacientes en sala de espera asignados a usted en esta clinica.</td></tr>`;
-            return;
+        // Limpiar columnas
+        colEspera.innerHTML = ""; colConsulta.innerHTML = ""; colEvaluados.innerHTML = "";
+        let countEspera = 0, countConsulta = 0, countEvaluados = 0;
+
+        misCitas.forEach(cita => {
+            const pacId = String(cita.pacienteId || (cita.paciente ? cita.paciente.id : ""));
+            const pacObj = mapaUsers[pacId] || cita.paciente || { nombre: cita.nombrePaciente || 'Paciente', dpi: 'N/A' };
+            const esEmergencia = (cita.motivo && cita.motivo.includes("EMERGENCIA")) || cita.prioridad === "EMERGENCIA";
+            const badgeEmergencia = esEmergencia ? `<span class="badge bg-danger mb-2">🚨 EMERGENCIA</span><br>` : '';
+            const inicial = pacObj.nombre.charAt(0).toUpperCase();
+
+            // Plantilla base de tarjeta gamificada
+            let tarjetaHtml = `
+                <div class="card-peds p-3 shadow-sm ${esEmergencia ? 'emergencia' : ''}" style="width: 100%; margin-bottom: 0;">
+                    ${badgeEmergencia}
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div class="peds-avatar m-0" style="width: 50px; height: 50px; font-size: 1.5rem;">${inicial}</div>
+                        <div class="text-start">
+                            <h6 class="fw-bold mb-0">${pacObj.nombre}</h6>
+                            <small class="text-muted">Cita #${cita.id} • ${cita.especialidad || 'General'}</small>
+                        </div>
+                    </div>`;
+
+            // Clasificar según estado
+            const estadoActual = cita.estado ? cita.estado.toUpperCase() : "";
+
+            // 📌 CORRECCIÓN PRINCIPAL AQUÍ: La columna 1 SOLO muestra el nuevo estado enviado por Enfermería
+            if (estadoActual === "EN_ESPERA_MEDICO") {
+                countEspera++;
+                tarjetaHtml += `
+                    <button onclick="iniciarConsultaMedica(${cita.id}, '${pacObj.nombre}')" class="btn-peds btn-sm py-2">▶️ Iniciar Consulta</button>
+                    <button onclick="marcarNoAsistio(${cita.id})" class="btn btn-outline-danger btn-sm w-100 fw-bold mt-2 rounded-pill">❌ No Asistió</button>
+                </div>`;
+                colEspera.innerHTML += tarjetaHtml;
+            }
+            // Columna 2: En Consulta
+            else if (estadoActual === "EN_CONSULTA" || estadoActual === "CONSULTA_MEDICA") {
+                countConsulta++;
+                tarjetaHtml += `
+                    <button onclick="abrirFormularioConsulta(${cita.id}, '${pacObj.nombre}', '${cita.motivo || ''}')" class="btn btn-primary fw-bold w-100 py-2" style="border-radius: 15px; box-shadow: 0 4px 0 #1d4ed8;">📝 Ver / Completar Consulta</button>
+                </div>`;
+                colConsulta.innerHTML += tarjetaHtml;
+            }
+            // Columna 3: Evaluados / Cierre
+            else if (estadoActual === "EVALUADO" || estadoActual === "ATENDIDA") {
+                countEvaluados++;
+                tarjetaHtml += `
+                    <div class="d-flex flex-wrap gap-2 justify-content-center mt-2">
+                        <button onclick="abrirModalLaboratorio(${cita.id})" class="btn btn-sm btn-outline-info fw-bold rounded-pill">🧪 Orden Lab</button>
+                        <button onclick="abrirModalReceta(${cita.id})" class="btn btn-sm btn-outline-warning fw-bold text-dark rounded-pill">💊 Receta</button>
+                        <button onclick="abrirModalSeguimiento('${pacId}')" class="btn btn-sm btn-outline-primary fw-bold rounded-pill">📅 Seguimiento</button>
+                    </div>
+                    <button onclick="finalizarAtencion(${cita.id})" class="btn-peds btn-sm py-2" style="background: #10b981; box-shadow: 0 6px 0 #047857;">✅ Finalizar Atención</button>
+                </div>`;
+                colEvaluados.innerHTML += tarjetaHtml;
+            }
+        });
+
+        if (countEspera === 0) colEspera.innerHTML = '<p class="text-center text-muted small my-3">Vacío</p>';
+        if (countConsulta === 0) colConsulta.innerHTML = '<p class="text-center text-muted small my-3">Vacío</p>';
+        if (countEvaluados === 0) colEvaluados.innerHTML = '<p class="text-center text-muted small my-3">Vacío</p>';
+
+    } catch (error) {
+        console.error("Error al cargar agenda:", error);
+    }
+}
+
+function actualizarTextoTemporizador() {
+    const lbl = document.getElementById("medico-timer");
+    if (lbl) lbl.innerText = `Actualizando en ${tiempoRestanteMedico}s...`;
+}
+
+
+// [CU-08 Flujo Normal 2] - Iniciar Consulta y Síntesis de Voz en la Nube
+async function iniciarConsultaMedica(citaId, nombrePaciente) {
+    try {
+        console.log(`Intentando iniciar consulta para la cita #${citaId}...`);
+
+        // Petición al backend
+        const respuesta = await fetch(`${API_URL}/citas/${citaId}/estado?nuevoEstado=EN_CONSULTA`, { method: "PUT" });
+
+        if (respuesta.ok) {
+            console.log("El servidor aceptó el cambio de estado.");
+
+            // Texto exacto que requiere el CU-08
+            const textoLlamada = `Turno número ${citaId}. Paciente ${nombrePaciente}, favor pasar a consulta médica.`;
+
+            // Usamos ResponsiveVoice (Hablará en español de Latinoamérica sin importar el Windows)
+            //if (typeof responsiveVoice !== 'undefined') {
+            //    responsiveVoice.speak(textoLlamada, "Spanish Latin American Female", { rate: 0.95 });
+          //  } else {
+               // console.warn("La librería de voz no cargó. Revisa tu conexión a internet.");
+          //  }
+
+            // Recargar las columnas para que la tarjeta se mueva a "En Consulta"
+            cargarAgendaMedico();
+
+        } else {
+            const errorTexto = await respuesta.text();
+            alert(`El servidor rechazó la petición (Código HTTP ${respuesta.status}).\nDetalle: ${errorTexto}`);
+        }
+    } catch (error) {
+        alert("Error crítico de conexión con el servidor: " + error.message);
+    }
+}
+
+
+async function marcarNoAsistio(citaId) {
+    if (confirm(`¿Estás seguro de marcar la Cita #${citaId} como "No Asistió"?`)) {
+        try {
+            const respuesta = await fetch(`${API_URL}/citas/${citaId}/estado?nuevoEstado=NO_ASISTIO`, {
+                method: "PUT"
+            });
+
+            if (respuesta.ok) {
+                // Mensaje exacto que pide el documento
+                alert(`Cita #${citaId} marcada como No Asistió.`);
+                cargarAgendaMedico(); // Recargamos el tablero para que la tarjeta desaparezca
+            } else {
+                alert("Error al intentar actualizar el estado.");
+            }
+        } catch (error) {
+            alert("Error de red: " + error.message);
+        }
+    }
+}
+
+// [CU-08 Flujo Normal 3] - Abrir formulario
+function abrirFormularioConsulta(citaId, nombrePaciente, motivoPrevio) {
+    document.getElementById("form-consulta-medica").reset();
+    document.getElementById("consulta-cita-id").value = citaId;
+    document.getElementById("consulta-paciente-nombre").innerText = nombrePaciente;
+    document.getElementById("consulta-cita-numero").innerText = `Cita #${citaId}`;
+
+    const motivoField = document.getElementById("consulta-motivo");
+    motivoField.value = motivoPrevio.replace('[EMERGENCIA] ', ''); // Limpiar tag visual si lo tiene
+
+    new bootstrap.Modal(document.getElementById('modalConsultaMedica')).show();
+}
+
+async function guardarConsultaMedica() {
+    const citaId = document.getElementById("consulta-cita-id").value;
+    const diagnostico = document.getElementById("consulta-diagnostico").value.trim();
+    const hallazgos = document.getElementById("consulta-hallazgos").value.trim();
+    const cie10 = document.getElementById("consulta-cie10").value.trim();
+    const tratamiento = document.getElementById("consulta-tratamiento").value.trim();
+    const notas = document.getElementById("consulta-notas").value.trim();
+    const estadoSeleccionado = document.getElementById("consulta-estado").value;
+
+    if (estadoSeleccionado === "FINALIZADA" && diagnostico === "") {
+        alert("No es posible finalizar la consulta sin registrar un diagnóstico. El campo Diagnóstico es obligatorio.");
+        document.getElementById("consulta-diagnostico").focus();
+        return;
+    }
+
+    const textoCompletoConsulta = `Diagnóstico: ${diagnostico} (CIE-10: ${cie10 || 'N/A'}) | Hallazgos: ${hallazgos || 'Ninguno'} | Tratamiento: ${tratamiento || 'Ninguno'} | Notas: ${notas || 'Ninguna'}`;
+
+    try {
+        // 1. Guardar la información clínica en observaciones
+        await fetch(`${API_URL}/citas/triage/${citaId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ observaciones: textoCompletoConsulta })
+        });
+
+        // 2. Si marcó finalizada, la mandamos a EVALUADO para que aparezca en la 3era columna
+        if (estadoSeleccionado === "FINALIZADA") {
+            await fetch(`${API_URL}/citas/${citaId}/estado?nuevoEstado=EVALUADO`, { method: "PUT" });
+            alert("Consulta finalizada con éxito. La tarjeta ahora se encuentra en la columna de Evaluados (Cierre).");
+        } else {
+            alert("Borrador de consulta guardado correctamente.");
         }
 
-        tabla.innerHTML = "";
-        misCitas.forEach(c => {
-            const pacId = String(c.pacienteId || (c.paciente ? c.paciente.id : ""));
-            const pacObj = mapaUsers[pacId] || c.paciente || { nombre: c.nombrePaciente || 'Paciente', dpi: 'N/A' };
-            const vitales = `<span class="badge bg-info text-dark font-monospace fs-6 px-2 py-1 shadow-sm">${c.observaciones || 'En proceso'}</span>`;
-            const botonExpediente = pacId ? `<button onclick="verExpedientePaciente(${pacId})" class="btn btn-outline-primary btn-sm mb-1 font-weight-bold">Ver Expediente</button><br>` : '';
-
-            tabla.innerHTML += `
-                <tr id="fila-medico-${c.id}">
-                    <td><strong class="text-primary font-monospace">${(c.fechaHora || '').replace('T', ' ')}</strong></td>
-                    <td><strong class="fs-6">${pacObj.nombre}</strong></td>
-                    <td>${botonExpediente}<span class="font-monospace text-muted">DPI: ${pacObj.dpi || pacObj.cui || 'N/A'}</span></td>
-                    <td>${c.motivo || ''}</td>
-                    <td>${vitales}</td>
-                    <td><button onclick="toggleFilaReceta(${c.id})" class="btn btn-success btn-sm font-weight-bold shadow-sm">Atender y Recetar</button></td>
-                </tr>
-                <tr id="caja-receta-${c.id}" style="display: none;" class="bg-light">
-                    <td colspan="6" class="p-3 border-bottom border-success shadow-inner">
-                        <div class="card card-body border-success bg-white shadow-sm p-3">
-                            <h6 class="font-weight-bold text-success mb-2">Atencion Clinica para: <span class="text-dark">${pacObj.nombre}</span></h6>
-                            <div class="row g-2">
-                                <div class="col-md-9">
-                                    <textarea id="receta-${c.id}" class="form-control form-control-sm font-weight-bold" rows="2" placeholder="Ingrese diagnostico y receta..."></textarea>
-                                </div>
-                                <div class="col-md-3">
-                                    <button onclick="guardarRecetaInline(${c.id}, '${pacObj.nombre}')" class="btn btn-success btn-sm w-100 font-weight-bold mb-1">Finalizar Consulta</button>
-                                    <button onclick="toggleFilaReceta(${c.id})" class="btn btn-outline-secondary btn-sm w-100">Cancelar</button>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                </tr>`;
-        });
+        bootstrap.Modal.getInstance(document.getElementById('modalConsultaMedica')).hide();
+        cargarAgendaMedico(); // Recargar tablero
     } catch (error) {
-        tabla.innerHTML = `<tr><td colspan="6" class="text-danger text-center">Error al cargar su agenda medica.</td></tr>`;
+        alert("Error al intentar guardar los datos de la consulta.");
+    }
+}
+
+// [CU-08 Flujo Normal 11] - Finalizar Atención total
+async function finalizarAtencion(citaId) {
+    if (!confirm("¿Finalizar totalmente la atención de este paciente?")) return;
+    try {
+        await fetch(`${API_URL}/citas/${citaId}/estado?nuevoEstado=ATENCION_FINALIZADA`, { method: "PUT" });
+        alert(`Atención finalizada para cita #${citaId}.`); // [CU-08 Flujo Normal 12]
+        cargarAgendaMedico();
+    } catch (error) {
+        alert("Error al finalizar atención.");
     }
 }
 
@@ -1437,19 +1700,249 @@ function desbloquearUsuario(id, nombre) {
         .catch(error => { alert("No se pudo desbloquear al usuario."); });
 }
 function recargarMisCitas() {
-    // 1. Verificamos que tengamos el ID del paciente guardado en memoria
     if (!miPacienteId) {
         document.getElementById("lista-citas-paciente").innerHTML =
             '<p class="text-danger text-center my-3">Error de sesión. Por favor inicie sesión de nuevo.</p>';
         return;
     }
 
-    // 2. Mostramos el mensaje de carga
     const contenedor = document.getElementById("lista-citas-paciente");
     if (contenedor) {
         contenedor.innerHTML = '<p class="text-muted text-center my-3">Actualizando su historial médico...</p>';
     }
 
-    // 3. Llamamos a tu función nativa que ya pinta las citas correctamente
     renderizarMisCitas();
 }
+
+function abrirModalLaboratorio(citaId) {
+    document.getElementById("lab-cita-id").value = citaId;
+    document.getElementById("lab-examenes").selectedIndex = -1;
+    document.getElementById("lab-observaciones").value = "";
+    new bootstrap.Modal(document.getElementById('modalLaboratorio')).show();
+}
+
+async function guardarOrdenLaboratorio() {
+    const citaId = document.getElementById("lab-cita-id").value;
+    const select = document.getElementById("lab-examenes");
+    const examenes = Array.from(select.selectedOptions).map(opt => opt.value).join(", ");
+    const observaciones = document.getElementById("lab-observaciones").value;
+
+    if (!examenes) {
+
+        alert(`Orden de laboratorio generada exitosamente. Número de orden: ${numeroOrdenCreado}. Exámenes: ${listaExamenes}. El paciente debe dirigirse al área de laboratorio.`);
+        return;
+    }
+
+    try {
+        const respuesta = await fetch(`${API_URL}/laboratorio`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ citaId: parseInt(citaId), examenes, observaciones })
+        });
+
+        const data = await respuesta.json();
+        if (respuesta.ok) {
+            alert(`¡Orden de laboratorio guardada en Base de Datos! Número: ${data.numero_orden}`);
+            bootstrap.Modal.getInstance(document.getElementById('modalLaboratorio')).hide();
+        } else {
+            alert("Error al guardar la orden: " + (data.error || "Desconocido"));
+        }
+    } catch (error) {
+        alert("Error crítico de conexión: " + error.message);
+    }
+}
+
+
+function abrirModalReceta(citaId) {
+    document.getElementById("receta-cita-id").value = citaId;
+    document.getElementById("receta-medicamento").value = "";
+    document.getElementById("receta-dosis").value = "";
+    document.getElementById("receta-frecuencia").value = "";
+    document.getElementById("receta-indicaciones").value = "";
+    new bootstrap.Modal(document.getElementById('modalReceta')).show();
+}
+
+async function guardarRecetaMedica() {
+    const citaId = document.getElementById("receta-cita-id").value;
+    const medicamento = document.getElementById("receta-medicamento").value.trim();
+    const dosis = document.getElementById("receta-dosis").value.trim();
+    const frecuencia = document.getElementById("receta-frecuencia").value.trim();
+    const indicaciones = document.getElementById("receta-indicaciones").value.trim();
+
+    if (!medicamento || !dosis || !frecuencia) {
+        // Ejemplo de cómo debe verse el alert:
+        alert(`Receta médica generada exitosamente. Medicamentos: ${listaMedicamentos}. El paciente puede adquirirlos en la farmacia de la clínica.`);
+        return;
+    }
+
+    try {
+        const respuesta = await fetch(`${API_URL}/recetas`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ citaId: parseInt(citaId), medicamento, dosis, frecuencia, indicaciones })
+        });
+
+        const data = await respuesta.json();
+        if (respuesta.ok) {
+            alert("¡Receta médica registrada y guardada exitosamente en el sistema!");
+            bootstrap.Modal.getInstance(document.getElementById('modalReceta')).hide();
+        } else {
+            alert("Error al guardar la receta: " + (data.error || "Desconocido"));
+        }
+    } catch (error) {
+        alert("Error crítico de conexión: " + error.message);
+    }
+}
+
+
+async function abrirModalSeguimiento(pacienteId) {
+    document.getElementById("seg-paciente-id").value = pacienteId;
+    document.getElementById("seg-fecha").value = "";
+
+    // Intentar rescatar la sucursal actual del médico desde el sistema
+    let sucursalIdActual = obtenerIdSucursal(miUsuarioActual);
+
+    // Si por alguna razón miUsuarioActual no trae la sucursal plana, la buscamos en el servidor
+    if (!sucursalIdActual && miUsuarioActual) {
+        try {
+            const medId = miUsuarioActual.id || miUsuarioActual.usuario_id;
+            const resp = await fetch(`${API_URL}/users`);
+            const usuarios = await resp.json();
+            const medicoEncontrado = usuarios.find(u => String(u.id) === String(medId));
+            if (medicoEncontrado) {
+                sucursalIdActual = obtenerIdSucursal(medicoEncontrado);
+            }
+        } catch (e) {
+            console.error("No se pudo autodetectar la sucursal", e);
+        }
+    }
+
+    // Guardar temporalmente la sucursal detectada en un campo oculto o en una variable global del modal
+    window.sucursalIdSeguimientoTemp = sucursalIdActual;
+
+    new bootstrap.Modal(document.getElementById('modalSeguimiento')).show();
+}
+
+
+async function guardarCitaSeguimiento() {
+    const pacienteId = document.getElementById("seg-paciente-id").value;
+    const fechaInput = document.getElementById("seg-fecha").value;
+
+    if (!fechaInput) {
+// Reemplaza el alert() de éxito por este:
+        alert(`Cita de seguimiento agendada para el ${fechaFormateada} a las ${horaFormateada}. Se enviará notificación al paciente.`);
+        return;
+    }
+
+    const medicoId = miUsuarioActual ? (miUsuarioActual.id || miUsuarioActual.usuario_id) : null;
+    const sucursalId = window.sucursalIdSeguimientoTemp || obtenerIdSucursal(miUsuarioActual);
+
+    if (!medicoId || !sucursalId) {
+        alert("Error de sesión: No se pudo identificar la sucursal del médico.");
+        return;
+    }
+
+    try {
+        // 1. Validar si el médico ya tiene una cita en esa misma fecha y hora exacta
+        const respCitas = await fetch(`${API_URL}/citas`);
+        if (respCitas.ok) {
+            const todasLasCitas = await respCitas.json();
+            // Comparamos el medico y la fecha/hora (formateando la cadena a YYYY-MM-DDTHH:mm)
+            const fechaIngresadaLimpia = fechaInput.substring(0, 16);
+
+            const ocupado = todasLasCitas.some(cita => {
+                const citaMedId = String(cita.medicoId || (cita.medico ? cita.medico.id : ""));
+                const citaFechaLimpia = (cita.fechaHora || "").substring(0, 16);
+                const estaActiva = cita.estado !== "CANCELADA" && cita.estado !== "ATENCION_FINALIZADA";
+
+                return citaMedId === String(medicoId) && citaFechaLimpia === fechaIngresadaLimpia && estaActiva;
+            });
+
+            if (ocupado) {
+                alert("⚠️ Horario Ocupado: Ya tienes una cita médica programada en este mismo horario exacto. Por favor, elije otra fecha u otro horario.");
+                return; // Detiene el proceso y no deja avanzar
+            }
+        }
+
+        // 2. Si está libre, procedemos a registrar la cita de seguimiento
+        const nuevaCitaSeguimiento = {
+            pacienteId: parseInt(pacienteId),
+            medicoId: parseInt(medicoId),
+            sucursal: { id: parseInt(sucursalId) },
+            especialidad: "Consulta de Seguimiento",
+            fechaHora: fechaInput,
+            motivo: "Consulta de Seguimiento / Monitoreo",
+            observaciones: "Cita de seguimiento asignada directamente por el médico especialista.",
+            prioridad: "NORMAL",
+            estado: "PROGRAMADA"
+        };
+
+        const respuesta = await fetch(`${API_URL}/citas`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(nuevaCitaSeguimiento)
+        });
+
+        let data = {};
+        try { data = await respuesta.json(); } catch (e) {}
+
+        if (respuesta.ok) {
+            const fechaObj = new Date(fechaInput);
+            const fechaFormateada = fechaObj.toLocaleDateString('es-ES');
+            const horaFormateada = fechaObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+            alert(`¡Cita de seguimiento agendada con éxito para el ${fechaFormateada} a las ${horaFormateada}!`);
+
+            const modalEl = document.getElementById('modalSeguimiento');
+            if (modalEl) {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+            }
+
+            if (typeof renderizarMisCitas === "function") {
+                renderizarMisCitas();
+            }
+        } else {
+            alert("El servidor rechazó la cita de seguimiento: " + (data.error || data.mensaje || "Error desconocido"));
+        }
+    } catch (error) {
+        alert("Error de red al validar la disponibilidad del horario: " + error.message);
+    }
+}
+
+async function cargarCatalogoCie10() {
+    try {
+        const respuesta = await fetch(`${API_URL}/cie10`);
+        if (respuesta.ok) {
+            window.catalogoCie10Cache = await respuesta.json();
+            const datalist = document.getElementById("lista-cie10");
+            if (datalist) {
+                datalist.innerHTML = "";
+                window.catalogoCie10Cache.forEach(item => {
+                    datalist.innerHTML += `<option value="${item.codigo}">[${item.codigo}] ${item.descripcion}</option>`;
+                });
+            }
+        }
+    } catch (e) {
+        console.error("Error al cargar catálogo CIE-10:", e);
+    }
+}
+
+// Autocompletar el diagnóstico de forma inteligente al escribir o seleccionar un código
+function autocompletarDiagnosticoCie10(codigoIngresado) {
+    if (!window.catalogoCie10Cache) return;
+    const limpio = codigoIngresado.trim().toUpperCase();
+    const encontrado = window.catalogoCie10Cache.find(item => item.codigo.toUpperCase() === limpio);
+
+    if (encontrado) {
+        const campoDiagnostico = document.getElementById("consulta-diagnostico");
+        if (campoDiagnostico) {
+            campoDiagnostico.value = encontrado.descripcion;
+        }
+    }
+}
+
+// Ejecutar la carga del catálogo apenas cargue la app
+document.addEventListener("DOMContentLoaded", () => {
+    cargarCatalogoCie10();
+});

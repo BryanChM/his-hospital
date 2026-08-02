@@ -2,6 +2,7 @@ package com.his.hospital.controller;
 
 import com.his.hospital.dto.CitaDTO;
 import com.his.hospital.entity.Cita;
+import com.his.hospital.repository.CitaRepository;
 import com.his.hospital.service.CitaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,12 +12,18 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/citas")
 @CrossOrigin(origins = "*")
 public class CitaController {
 
+    @Autowired
+    private CitaRepository citaRepository;
+
+    @Autowired
+    private CitaService citaService;
 
     @PutMapping("/llegada/{id}")
     public ResponseEntity<?> registrarLlegadaRecepcion(@PathVariable Long id) {
@@ -34,9 +41,6 @@ public class CitaController {
             return ResponseEntity.badRequest().body(respuesta);
         }
     }
-
-    @Autowired
-    private CitaService citaService;
 
     @PostMapping({"", "/", "/agendar"})
     public ResponseEntity<?> agendar(@RequestBody CitaDTO dto) {
@@ -108,6 +112,27 @@ public class CitaController {
             return ResponseEntity.ok().body(Map.of("mensaje", "Consulta finalizada con éxito"));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/estado")
+    public ResponseEntity<?> cambiarEstadoCita(@PathVariable Long id, @RequestParam String nuevoEstado) {
+        // 1. Buscamos la cita en la base de datos (con 'c' minúscula)
+        Optional<Cita> citaOpt = citaRepository.findById(id);
+
+        if (citaOpt.isPresent()) {
+            Cita cita = citaOpt.get();
+
+            // 2. Le cambiamos el estado por el que envía JavaScript ("EN_CONSULTA")
+            cita.setEstado(nuevoEstado);
+
+            // 3. Guardamos los datos (con 'c' minúscula)
+            citaRepository.save(cita);
+
+            // 4. Respondemos que todo salió bien
+            return ResponseEntity.ok(cita);
+        } else {
+            return ResponseEntity.notFound().build();
         }
     }
 }

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor de Llamados - Hospital System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- LIBRERÍA RESPONSIVEVOICE (Requerimiento del Proyecto) -->
+    <script src="https://code.responsivevoice.org/responsivevoice.js"></script>
+
+    <style>
+        body {
+            background-color: #0f172a;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        .header {
+            background-color: #1e293b;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 5px solid #38bdf8;
+        }
+        .llamado-principal {
+            background-color: #1e293b;
+            border-radius: 20px;
+            padding: 50px;
+            border: 4px solid #38bdf8;
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
+            transition: all 0.5s ease;
+        }
+        .parpadeo {
+            animation: blinker 1s linear infinite;
+            border-color: #facc15;
+            box-shadow: 0 0 50px rgba(250, 204, 21, 0.6);
+        }
+        @keyframes blinker {
+            50% { opacity: 0.8; transform: scale(1.02); }
+        }
+        .nombre-paciente { font-size: 5rem; font-weight: 900; color: #facc15; text-transform: uppercase; line-height: 1.1; }
+        .medico { font-size: 3rem; font-weight: bold; color: #38bdf8; }
+        .especialidad { font-size: 2.5rem; color: #cbd5e1; }
+
+        #pantalla-inicio {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a; display: flex; align-items: center; justify-content: center; z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<div id="pantalla-inicio">
+    <button onclick="iniciarMonitor()" class="btn btn-primary btn-lg" style="font-size: 3rem; padding: 20px 50px;">
+        📺 Iniciar Monitor del Pasillo
+    </button>
+</div>
+
+<div class="header">
+    <h1>🏥 LLAMADO A PACIENTES</h1>
+</div>
+
+<div class="container-fluid mt-4">
+    <div class="row px-4">
+        <div class="col-md-12 text-center mt-5">
+            <div id="tarjeta-llamado" class="llamado-principal">
+                <div class="mb-3"><span class="badge bg-danger" style="font-size: 2rem;">TURNO ACTUAL</span></div>
+                <div id="m-paciente" class="nombre-paciente">ESPERANDO...</div>
+                <div class="mt-4">
+                    <div id="m-medico" class="medico">---</div>
+                    <div id="m-especialidad" class="especialidad">---</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = "http://localhost:8080/api";
+    let ultimosLlamados = [];
+    let intervaloMonitor = null;
+
+    function iniciarMonitor() {
+        document.getElementById("pantalla-inicio").style.display = "none";
+        document.documentElement.requestFullscreen().catch(e => console.log(e));
+
+        intervaloMonitor = setInterval(verificarNuevosLlamados, 3000);
+
+        // Prueba inicial de voz para verificar que ResponsiveVoice funciona
+        if (typeof responsiveVoice !== 'undefined') {
+            responsiveVoice.speak("Monitor activado. Sistema en línea.", "Spanish Latin American Female", { rate: 0.95 });
+        }
+    }
+
+    async function verificarNuevosLlamados() {
+        try {
+            const [respCitas, respUsers] = await Promise.all([
+                fetch(`${API_URL}/citas`), fetch(`${API_URL}/users`)
+            ]);
+
+            const citas = await respCitas.json();
+            const usuarios = await respUsers.json();
+            const mapaUsers = {};
+            usuarios.forEach(u => { mapaUsers[String(u.id)] = u; });
+
+            const enConsulta = citas.filter(c => c.estado === "EN_CONSULTA");
+
+            enConsulta.forEach(cita => {
+                if (!ultimosLlamados.includes(cita.id)) {
+                    ultimosLlamados.push(cita.id);
+                    mostrarLlamadoEnPantalla(cita, mapaUsers);
+                }
+            });
+
+        } catch (error) {
+            console.error("Error consultando sistema:", error);
+        }
+    }
+
+    function mostrarLlamadoEnPantalla(cita, mapaUsers) {
+        const pacId = String(cita.pacienteId || (cita.paciente ? cita.paciente.id : ""));
+        const medId = String(cita.medicoId || (cita.medico ? cita.medico.id : ""));
+
+        const pacObj = mapaUsers[pacId] || cita.paciente || { nombre: cita.nombrePaciente || 'Paciente' };
+        const medObj = mapaUsers[medId] || cita.medico || { nombre: cita.nombreMedico || 'Médico' };
+
+        const especialidad = cita.especialidad || medObj.especialidad || 'Consultorio General';
+
+        document.getElementById("m-paciente").innerText = pacObj.nombre;
+        document.getElementById("m-medico").innerText = `Dr(a). ${medObj.nombre}`;
+        document.getElementById("m-especialidad").innerText = especialidad;
+
+        const tarjeta = document.getElementById("tarjeta-llamado");
+        tarjeta.classList.add("parpadeo");
+        setTimeout(() => { tarjeta.classList.remove("parpadeo"); }, 5000);
+
+        // TEXTO EXACTO DEL REQUERIMIENTO (CU-08) USANDO RESPONSIVE VOICE
+        const textoLlamada = `Turno número ${cita.id}. Paciente ${pacObj.nombre}, favor pasar a consulta médica.`;
+
+        if (typeof responsiveVoice !== 'undefined') {
+            responsiveVoice.speak(textoLlamada, "Spanish Latin American Female", { rate: 0.95 });
+        } else {
+            console.warn("La librería ResponsiveVoice no cargó.");
+        }
+    }
+</script>
+</body>
+</html>
